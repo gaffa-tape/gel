@@ -1,0 +1,3 @@
+{"ts":1342000037476,"silentsave":true,"restoring":false,"patch":[[{"diffs":[[1,"gel\n===\n\nGaffa Expression Language"]],"start1":0,"start2":0,"length1":0,"length2":34}]],"length":34}
+{"contributors":[],"silentsave":true,"ts":1342000049637,"patch":[[{"diffs":[[-1,"gel\n===\n\nGaffa Expression Language"],[1,"statix\n===================\n\nServes static contents for my projects"]],"start1":0,"start2":0,"length1":34,"length2":66}]],"length":66,"saved":false}
+{"ts":1342000051142,"patch":[[{"diffs":[[0,"stati"],[1,"c"],[0,"x\n======"]],"start1":0,"start2":0,"length1":13,"length2":14}]],"length":67,"saved":false}

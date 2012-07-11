@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>expression tester</title>
+    <script src="gel.js" type="text/javascript"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+    <script>
+
+        String.prototype.format = String.prototype.f = function () {
+            var s = this,
+                i = arguments.length;
+
+            while (i--) {
+                var v;
+                try {
+                    v = arguments[i].toString();
+                }
+                catch (ex) {
+                    v = arguments[i];
+                }
+                s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), v);
+            }
+            return s;
+        };
+
+        gaffa =  {
+
+            model : {
+                array : [1, 2, 3],
+                prop : 15,
+                prop2 : 10,
+                empty: {},
+                get: function (path) {
+                    // slice of []
+                    path = path.slice(1,-1);
+                    var index = path.indexOf("model/");
+                    if (index >= 0) {
+                        path = path.substring(index + 6);
+                    }
+                    return this[path];
+                }
+            }
+        };
+
+
+        function arrayEqual(arrayX, arrayY) {
+            if (!arrayX || !arrayY) {
+                return false;    
+            }
+            
+            if (arrayX.length != arrayY.length) return false;
+
+            for (var i = 0; i < arrayX.length; i++) {
+                if (arrayX[i] != arrayY[i]) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        $(document).ready(function () {
+
+            $.getJSON("expressionTests.json", function(tests) {
+                //console.log(tests);
+                
+                for (var index = 0; index < tests.length; index++) {
+                    var test = tests[index][0],
+                        expected = tests[index][1],
+                        a,
+                        e;
+                        
+    
+                    var actual = "[[ERROR]]";
+                    var exceptionMsg = "";
+                    try {
+                        actual = gel.parse(test);
+                    }
+                    catch (ex) {
+                        exceptionMsg = ex;
+                        console.warn("Scan function failed!" + ex , ex);
+                    }
+                    finally { }
+    
+                        
+                    // special case for printed functions
+                    if (typeof actual === "function"){
+                        a =  actual.toString().replace(/\s+/g, '');
+                        e = expected.replace(/\s+/g, '');
+                        passFail = a === e;
+                    } else if(typeof actual === "object"){
+                        actual = a =  JSON.stringify(actual);
+                        expected = e = JSON.stringify(expected);
+                        passFail = a === e;
+                    } else {
+                        passFail = actual === expected;
+                    }
+                    
+                    var trString = 
+                        '<tr class="{0}"><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>'
+                        .format((passFail ? "pass" : "fail"), index, test, actual, expected, exceptionMsg);
+                    $("#initialtests tbody").append(trString);
+                }
+         }).error(function() {console.log(arguments)});
+        });
+        
+        $(document).on('click', 'button.run',function(){
+             var expression = $('.expressions').val(),
+                resultBox = $('.results'),
+                result;
+                                
+                resultBox.val(gel.parse(expression));
+        });
+
+    </script>
+    <style type="text/css">
+        textarea {
+            width: 90%;
+            height:250px;
+        }
+
+        td, th {
+            padding: 3px;
+        }
+
+        .pass {
+            background-color:#b6ff00;
+        }
+
+        .fail {
+            background-color: #ff6b6b;
+            
+        }
+        
+    </style>
+</head>
+<body>
+    <h1>Expression tester</h1>
+    <textarea class="expressions"></textarea>
+    <br />
+    <button class="run">Run</button>   <br />
+    <textarea class="results"></textarea>
+
+    <table id="initialtests">
+        <thead>
+            <tr>
+                <th>Id</th><th>Input</th><th>Actual</th><th>Expected</th><th>Exception</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        </tbody>
+    </table>
+</body>
+</html>
