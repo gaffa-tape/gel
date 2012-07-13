@@ -169,7 +169,7 @@
                             }
                         }
                 
-                        var valids = "0123456789-.Ex";
+                        var valids = "0123456789-.Eex";
                         var index = 0;
                         while (valids.indexOf(expression[index]) >= 0 && ++index) {}
                 
