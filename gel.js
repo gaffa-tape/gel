@@ -25,7 +25,7 @@
                 return results;
             };
             
-            function argumentsEach(args, callback) {
+            function itemsEach(args, callback) {
                     for (var i = 0; i < args.length; i++) {
                         if (callback(args[i], i, args)) break;
                     }
@@ -60,15 +60,17 @@
                 subExpression: "subExpression",
                 empty: "void",
                 delimitter: "delimitter",
-                identifier: "identifier"
+                identifier: "identifier",
+                period: "period"
                 
             };
 
-            function tokenResult(value, index, type) {
+            function tokenResult(value, index, type, callback) {
                     return {
                         value: value,
                         index: index,
-                        type: type
+                        type: type,
+                        callback: callback
                     };
                 }
                 
@@ -101,45 +103,54 @@
                 }
                 
             function detectString(expression, stringTerminal, stringType) {
-                       if (expression[0] === stringTerminal) {
-                           var index = 0,
-                                   escapes = 0;
-                                   
-                           while (expression[++index] !== stringTerminal)
-                           {
-                                   if(index >= expression.length){
-                                           throw "Unclosed "+ stringType + " string";
-                                   }
-                                   if (expression[index] === '\\' && expression[index + 1] === stringTerminal) {
-                                           expression = expression.slice(0, index) + expression.slice(index + 1);
-                                           escapes++;
-                                   }
-                           } 
-            
-                           return {
-                                   value: expression.slice(1, index),
-                                   index: index + escapes + 1
-                           };
-                   }      
-              }
+                if (expression[0] === stringTerminal) {
+                    var index = 0,
+                    escapes = 0;
+                           
+                    while (expression[++index] !== stringTerminal)
+                    {
+                           if(index >= expression.length){
+                                   throw "Unclosed "+ stringType + " string";
+                           }
+                           if (expression[index] === '\\' && expression[index + 1] === stringTerminal) {
+                                   expression = expression.slice(0, index) + expression.slice(index + 1);
+                                   escapes++;
+                           }
+                    } 
+
+                    return {
+                           value: expression.slice(1, index),
+                           index: index + escapes + 1
+                    };
+                }
+            }
+              
+            function getProperty(object, propertiesString) {
+                var properties = propertiesString.split(".").reverse();
+                while (properties.length) {
+                    var nextProp = properties.pop();
+                    if (object[nextProp] !== undefined && object[nextProp] !== null) {
+                        object = object[nextProp];
+                    } else {
+                        return;
+                    }
+                }
+                return object;
+            }
               
               
                 
 
             /**    EXPORTS   **/
             
-            this.tokensConverters = {
+            this.tokenConverters = {
                 nests: {
                     "parentheses": function convertParenthesisToken(substring) {
                         return nestingToken(substring, "(", ")", "parantheses");
                     },
-                    "braces": function convertBracesToken(substring) {
-                        return nestingToken(substring, "{", "}", "braces");
-                    }/*,
-                
-                                    "wat": function convertBracesToken(substring) {
-                                        return nestingToken(substring, "!wat", "?wat", "wat");
-                                    },*/
+                    "function": function convertBracesToken(substring) {
+                        return nestingToken(substring, "{", "}", "function");
+                    }
                 },
                 primitives: {
                     "delimitter": function convertDelimitterToken(substring) {
@@ -174,7 +185,11 @@
                         while (valids.indexOf(expression[index]) >= 0 && ++index) {}
                 
                         if (index > 0) {
-                            return tokenResult(parseFloat(expression.slice(0, index)), index);
+                            var result = parseFloat(expression.slice(0, index));
+                            if(isNaN(result)){
+                                return;
+                            }
+                            return tokenResult(result, index);
                         }
                 
                         return;
@@ -251,12 +266,20 @@
                                 return tokenResult(
                                 //expression.slice(0, index + 1),
                 
-                                function() {
-                                    return gaffa.model.get(expression.slice(0, index + 1));
-                                }, index + escapes + 1 // don't ask me why, this just works
+                                    expression.slice(0, index + 1),
+                                    index + escapes + 1, // don't ask me why, this just works
+                                    null,
+                                    function() {
+                                        return gaffa.model.get(expression.slice(0, index + 1), gaffa.model.get.context, true);
+                                    }
                                 );
                             }
                         }
+                    },
+                    "period": function convertPeriodToken(expression) {
+                        var periodConst = ".";
+                        if (expression.slice(0, 1) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
+                        return;
                     }
                 }
             // end token converters
@@ -359,7 +382,7 @@
                 "+": function add() {
                     // add all arguments (force numbers) (args:0+)
                     var sum = 0;
-                    argumentsEach(arguments, function(value) {
+                    itemsEach(arguments, function(value) {
                         sum += !isNaN(value) && parseFloat(value);
                     });
 
@@ -368,7 +391,7 @@
                 "*": function product() {
                     // multiply all arguments (force numbers) (args:0+)
                     var total = 1;
-                    argumentsEach(arguments, function(value) {
+                    itemsEach(arguments, function(value) {
                         total *= !isNaN(value) && parseFloat(value);
                     });
 
@@ -377,7 +400,7 @@
                 "/": function quotient() {
                     // divide all arguments (force numbers) (args:0+)
                     var total;
-                    argumentsEach(arguments, function(value) {
+                    itemsEach(arguments, function(value) {
                         var number = !isNaN(value) && parseFloat(value);
                         if (total === undefined) {
                             total = number;
@@ -405,7 +428,7 @@
                 "concat": function concat() {
                     // concat all arguments (force strings) (args:0+)
                     var result = "";
-                    argumentsEach(arguments, function(value) {
+                    itemsEach(arguments, function(value) {
                         result = result.concat(value);
                     });
                     return result;
@@ -478,6 +501,32 @@
                         throw "parameter was not an object";
                     }
                 },
+                "filter": function filter() {
+                    var args = Array.prototype.slice.call(arguments),
+                        filteredList = [];
+                    if (args.length < 2) {
+                        return args;
+                    }
+                    
+                    var array = args[0];
+                    var functionToCompare = args[1];
+                    
+                    if (Array.isArray(array)) {
+                        
+                        itemsEach(array, function(item){
+                            if(typeof functionToCompare === "function"){
+                                functionToCompare.call(this, item) && filteredList.push(item);
+                            }else{
+                                item === functionToCompare && filteredList.push(item);
+                            }
+                        });
+                            
+                        return filteredList;
+                    
+                    }else {
+                        return;
+                    }
+                },
                 "length": function length() {
                     // get the length of the first argument (args:==1)
                     // will work on any item that defines ".length"
@@ -535,11 +584,47 @@
 
                     return true;
                 },
+                "format": function format() {
+                    var args = [];
+                    
+                    itemsEach(arguments, function(item){
+                        args.push(item);
+                    });
+                    
+                    return (args.shift()).format(args);
+                },
+                "contains": function contains() {
+                    var args = Array.prototype.slice.call(arguments),
+                        target = args.shift(),
+                        success = true,
+                        strict = false;
+                        
+                    if(typeof target === 'boolean'){
+                        strict = target;
+                        target = args.shift();
+                    }
+                    
+                    if(!strict && typeof target === "string"){
+                        target = target.toLowerCase();
+                    }
+                        
+                    itemsEach(args, function(arg){
+                        
+                        if(!strict && typeof arg === "string"){
+                            arg = arg.toLowerCase();
+                        }
+                        if(target.indexOf(arg)<0){
+                            success = false;
+                            return true;
+                        }
+                    });
+                    return success;
+                },                
                 "max": function max() {
                     // get the maximum value of the input items
                     // works on truthy, assumes primitive values
                     var result = arguments[0];
-                    argumentsEach(arguments, function(value) {
+                    itemsEach(arguments, function(value) {
                         if (value > result) {
                             result = value;
                         }
@@ -580,14 +665,22 @@
             
 
             /**    MAIN    **/
+            
+            var memoisedTokens = {};
 
             function tokenise(expression, inRecursion, typeOfNest) {
+                if(memoisedTokens[expression]){
+                    return memoisedTokens[expression];
+                }
+                if(!expression){
+                    return [];
+                }
                 // split expression parts into tokens, assumes no wrapping ( ) are included
                 var originalExpression = expression;
 
                 var tokens = [];
                 var totalCharsProcessed = 0;
-                var knownTokenConverters = [gel.tokensConverters.nests, gel.tokensConverters.primitives, gel.tokensConverters.others];
+                var knownTokenConverters = [gel.tokenConverters.nests, gel.tokenConverters.primitives, gel.tokenConverters.others];
                 
 
                 do {
@@ -600,7 +693,7 @@
                             var result = tokenConverterGroup[tokenConverterKey](expression);
                             if (result) {
                                 // TODO: maybe have exclude prop here? if(!result.exclude){
-                    
+                                
                                 if (result.nestEnded) {
                                     if (result.subExpressionType !== typeOfNest) {
                                         throw strings.BadNesting.format(totalCharsProcessed + 1, result.subExpressionType, typeOfNest);
@@ -625,9 +718,18 @@
                                         type: result.type
                                     };
                                 }
+                                
+                                //Add the token name to the token.
+                                result.tokenName = tokenConverterKey;
+                                                                
+                                //Add the original string to the token.
+                                result.originalString = expression.slice(0, result.index);
+                                
+                                result.absoluteIndex = totalCharsProcessed;
                     
                                 expression = expression.slice(result.index);
                                 totalCharsProcessed += result.index;
+                                
                                 tokens.push(result);
                                 
                                 // exit both loops
@@ -648,14 +750,17 @@
                 if (inRecursion) {
                     throw "Invalid nesting in " + originalExpression;
                 }
-
+                
+                memoisedTokens[expression] = tokens;
+                
                 return tokens;
             }
             
-            function evaluateTokens(tokens, isInSubExpression) {
-
+            function evaluateTokens(tokens, isInSubExpression, scopedVariables) {
                 // expected input,
                 // tokens: array of tokens (created by tokenise)
+                
+                scopedVariables = scopedVariables || {};
 
                 var tokensLength = tokens.length;
                 if (tokensLength === 0) {
@@ -682,17 +787,74 @@
                         }
                         continue;
                     }
-
-                    // is either a subExpression or a value or an identifier
-                    if (token.type === knownTokens.subExpression) {
+                    
+                    if (token.type === knownTokens.period) {
+                        if(!partIndex){
+                            throw "unexpected " + knownTokens.period;
+                        }
+                        if(tokens[partIndex + 1].type !== "identifier"){
+                            throw "no identifier following " + knownTokens.period;
+                        }
+                        if(typeof tokens[partIndex - 1] === "object" || typeof tokens[partIndex - 1] === "function")
+                        tokens[partIndex - 1] = tokens[partIndex - 1][tokens[partIndex + 1].value];
+                        
+                        tokens = tokens.slice(0, partIndex).concat(tokens.slice(partIndex + 2))
+                        partIndex--;
+                        tokensLength-=2;
+                    }else if (token.type === knownTokens.subExpression) {
                         // [recursion] - evaluate nesting
-                        tokens[partIndex] = evaluateTokens(token.value, true);
+                        if(token.tokenName === "function"){
+                            var functionToRun = token.value.pop();
+                            
+                            var argumentsToPassAsVariables;
+                            
+                            while(functionToRun.type === knownTokens.delimitter){
+                                functionToRun = token.value.pop();
+                            }
+                            
+                            argumentsToPassAsVariables = token.value;
+                            
+                            if(functionToRun.type !== knownTokens.subExpression && functionToRun.type !== knownTokens.identifier){
+                                throw "Last parameter in function definition was not a sub-expression or identifier";
+                            }
+                            
+                            tokens[partIndex] = function(){
+                                var args = Array.prototype.slice.call(arguments),
+                                    namedArguments = {}; 
+
+                                itemsEach(argumentsToPassAsVariables, function(innerToken, index){
+                                    if(index < args.length){
+                                        namedArguments[innerToken.value] = args[index];
+                                    }
+                                });   
+                                
+                                for(var key in scopedVariables){
+                                    if(namedArguments[key] !== undefined){
+                                        console.warn("internal scoped variable " + key + "hides value from outer scope");
+                                    }else{
+                                        namedArguments[key] = scopedVariables[key];                                        
+                                    }
+                                }                             
+
+                                //(filter (array 1 2 3 4 5 4 3 2 1) {item (= item 2) } )
+                                                                
+                                return evaluateTokens(functionToRun.value, true, namedArguments);
+                            };
+                            
+                            
+                            
+                        }else{
+                            tokens[partIndex] = evaluateTokens(token.value, true, scopedVariables);
+                        }
                     }
                     else if (token.type === knownTokens.identifier) {
                         // evaluate identifier.
                         // note: variables are evaluted (TODO: variables)
                         // functions on the otherhand cannot be evaluated - because not in first index (so return func itself)
                         var value = gel.functions[token.value];
+                        if (!value) {
+                            value = scopedVariables[token.value];
+                        }
                         if (!value) {
                             throw strings.UnknownIdentifier.format(token.value);
                         }
@@ -701,7 +863,11 @@
                     }
                     else {
                         // if argument, leave as is (evaluate callbacks)
-                        tokens[partIndex] = (typeof token.value === "function") ? token.value() : token.value;
+                        if(token.callback){
+                            tokens[partIndex] = token.callback(token.value);
+                        }else{
+                            tokens[partIndex] = token.value;
+                        }
                     }
                 }
 
@@ -726,6 +892,24 @@
             this.parse = function parse(expression) {
                 var tokens = tokenise(expression);
                 return evaluateTokens(tokens);
+            };
+            
+            this.getTokens = function getTokens(expression, tokenName){
+                var tokens = tokenise(expression),
+                    filteredTokens = [];
+                                        
+                function filterTokens(tokens){
+                    itemsEach(tokens, function(token){
+                        token.tokenName === tokenName && filteredTokens.push(token);
+                        if(token.type === knownTokens.subExpression){
+                            filterTokens(token.value);
+                        }
+                    });
+                };
+                
+                filterTokens(tokens);
+                  
+                return filteredTokens;                
             };
             // end gel
         }

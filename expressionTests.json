@@ -1,4 +1,12 @@
-[
+[    
+    [
+        "(object 'thing' 5).thing",
+        5
+    ],
+    [
+        "(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )",
+        [2,2]
+    ],
 	[
 		"(demoFunc)",
 		123456
@@ -6,10 +14,6 @@
     [
     	"(demoFunc",
 		"[[ERROR]]"
-	],
-    [
-		"{demoFunc}",
-		123456
 	],
     [
 		"(demoFunc}",
@@ -212,6 +216,34 @@
     [
         "(slice (array 1 2 3))",
         [1, 2, 3]
+    ],
+    [
+        "(format 'hello {0}' 'world')",
+        "hello world"
+    ],
+    [
+        "(filter (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})",
+        [{"prop":5},{"prop":5}]
+    ],
+    [
+        "(contains 'Hello World' 'WAT')",
+        false
+    ],
+    [
+        "(contains 'Hello World' 'hello')",
+        true
+    ],
+    [
+        "(contains 'Hello World' 'Hello')",
+        true
+    ],
+    [
+        "(contains true 'Hello World' 'hello')",
+        false
+    ],
+    [
+        "(contains false 'Hello World' 'hello')",
+        true
     ],
     [
         "(last (array 1 2 3 \"abc\"))",

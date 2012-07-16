@@ -101,6 +101,7 @@
                         .format((passFail ? "pass" : "fail"), index, test, actual, expected, exceptionMsg);
                     $("#initialtests tbody").append(trString);
                 }
+                
          }).error(function() {console.log(arguments)});
         });
         
