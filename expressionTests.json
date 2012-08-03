@@ -1,5 +1,17 @@
 [    
     [
+        "(fromJSON '{\"hello\":[\"world\"]}')",
+        {"hello":["world"]}
+    ],
+    [
+        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (< 1 (length(filter item {item (= item 2)})))})",
+        [[2,2,3]]
+    ],
+    [
+        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})",
+        [[1,2,3]]
+    ],
+	[
         "(object 'thing' 5).thing",
         5
     ],
@@ -7,7 +19,7 @@
         "(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )",
         [2,2]
     ],
-	[
+    [
 		"(demoFunc)",
 		123456
 	],
@@ -187,6 +199,26 @@
     [
         "(!== true 1)",
         true
+    ],
+    [
+        "(> 1 1)",
+        false
+    ],
+    [
+        "(> 2 1)",
+        true
+    ],
+    [
+        "(> 1 2)",
+        false
+    ],
+    [
+        "(> 3 2 1)",
+        true
+    ],
+    [
+        "(> 1 2 3)",
+        false
     ],
     [
         "(array 1 2 3 \"abc\")",

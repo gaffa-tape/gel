@@ -337,6 +337,32 @@
                     }
                     return true;
                 },
+                ">": function greaterThen() {
+                    // test strict inequality (args:2+)
+                    var argsLength = arguments.length,
+                        result = false;
+                    if (argsLength <= 1) throw "greater than function needs more than one argument";
+                    for (var i = 0; i < argsLength-1; i++) {
+                        result = arguments[i] > arguments[i+1];
+                        if(!result){
+                            break;
+                        }
+                    }
+                    return result;
+                },
+                "<": function lessThen() {
+                    // test strict inequality (args:2+)
+                    var argsLength = arguments.length,
+                        result = false;
+                    if (argsLength <= 1) throw "greater than function needs more than one argument";
+                    for (var i = 0; i < argsLength-1; i++) {
+                        result = arguments[i] < arguments[i+1];
+                        if(!result){
+                            break;
+                        }
+                    }
+                    return result;
+                },
                 "&": function andStrict() {
                     // does a strict "and", only accept true/false values
                     var argsLength = arguments.length;
@@ -501,6 +527,42 @@
                         throw "parameter was not an object";
                     }
                 },
+                "filterKeys": function filter() {
+                    var args = Array.prototype.slice.call(arguments),
+                        filteredObject;
+                    if (args.length < 2) {
+                        return args;
+                    }
+                    
+                    var objectToFilter = args[0];
+                    var functionToCompare = args[1];                    
+                    
+                    if (objectToFilter && typeof objectToFilter === "object") {
+                        if(Array.isArray(objectToFilter)){
+                            filteredObject = [];
+                        }else{
+                            filteredObject = new objectToFilter.prototype.constructor();
+                        }
+                    
+                        for(var key in objectToFilter){
+                            var item = objectToFilter[key];
+                            if(typeof functionToCompare === "function"){
+                                if(functionToCompare.call(this, item)){
+                                    filteredObject[key] = item;
+                                }
+                            }else{
+                                if(item === functionToCompare && item){
+                                    filteredObject[key] = item;
+                                }
+                            }
+                        }
+                            
+                        return filteredObject;
+                    
+                    }else {
+                        return;
+                    }
+                },
                 "filter": function filter() {
                     var args = Array.prototype.slice.call(arguments),
                         filteredList = [];
@@ -599,6 +661,10 @@
                         success = true,
                         strict = false;
                         
+                    if(target == null){
+                        return;
+                    }
+                        
                     if(typeof target === 'boolean'){
                         strict = target;
                         target = args.shift();
@@ -649,8 +715,11 @@
                 "demoFunc": function() {
                     return 123456;
                 },
-                "lambda": function makeLambda() {
-                    // TODO: :-D
+                "fromJSON": function makeLambda() {
+                    return JSON.parse(arguments[0]);
+                },
+                "toJSON": function makeLambda() {
+                    return JSON.stringify(arguments[0]);
                 }
 
             };
@@ -756,6 +825,14 @@
                 return tokens;
             }
             
+            //strip delimiters, we won't ever care about them...
+            // poor delimiters... no one loves them :(
+            function stripDelimiters(tokens){
+                return arrayWhere(tokens, function(item) {
+                    return item.type !== knownTokens.delimitter;
+                });
+            }
+            
             function evaluateTokens(tokens, isInSubExpression, scopedVariables) {
                 // expected input,
                 // tokens: array of tokens (created by tokenise)
@@ -769,9 +846,7 @@
                 }
 
                 // filter out delmitters
-                tokens = arrayWhere(tokens, function(item) {
-                    return item.type !== knownTokens.delimitter;
-                });
+                tokens = stripDelimiters(tokens);
 
                 // evaluate  tokens
                 tokensLength = tokens.length;
@@ -804,15 +879,15 @@
                     }else if (token.type === knownTokens.subExpression) {
                         // [recursion] - evaluate nesting
                         if(token.tokenName === "function"){
-                            var functionToRun = token.value.pop();
+                        
+                            token.value = stripDelimiters(token.value);
+                        
+                            //do not modify token.value as it is used for each itteration.
+                            var functionToRun = token.value[token.value.length-1];
                             
                             var argumentsToPassAsVariables;
                             
-                            while(functionToRun.type === knownTokens.delimitter){
-                                functionToRun = token.value.pop();
-                            }
-                            
-                            argumentsToPassAsVariables = token.value;
+                            argumentsToPassAsVariables = token.value.slice(0, token.value.length-1);
                             
                             if(functionToRun.type !== knownTokens.subExpression && functionToRun.type !== knownTokens.identifier){
                                 throw "Last parameter in function definition was not a sub-expression or identifier";
@@ -840,8 +915,6 @@
                                                                 
                                 return evaluateTokens(functionToRun.value, true, namedArguments);
                             };
-                            
-                            
                             
                         }else{
                             tokens[partIndex] = evaluateTokens(token.value, true, scopedVariables);
