@@ -399,11 +399,15 @@
                 },
                 "||": function orTruthy() {
                     // does a truthy "or", like the JS "||"
-                    var argsLength = arguments.length;
-                    for (var i = 1; i < argsLength; i++) {
-                        if (!(arguments[i] || arguments[i - 1])) return false;
+                    var argsLength = arguments.length,
+                        last = arguments[0];
+                        
+                    if(argsLength){
+                        for (var i = 0; i < argsLength - 1; i++) {
+                            last = arguments[i] || arguments[i + 1];
+                        }
                     }
-                    return arguments[argsLength - 1];
+                    return last;
                 },
                 "+": function add() {
                     // add all arguments (force numbers) (args:0+)
@@ -527,7 +531,7 @@
                         throw "parameter was not an object";
                     }
                 },
-                "filterKeys": function filter() {
+                "filterKeys": function filterKeys() {
                     var args = Array.prototype.slice.call(arguments),
                         filteredObject;
                     if (args.length < 2) {
@@ -541,7 +545,11 @@
                         if(Array.isArray(objectToFilter)){
                             filteredObject = [];
                         }else{
-                            filteredObject = new objectToFilter.prototype.constructor();
+                            if(objectToFilter.prototype){
+                                filteredObject = new objectToFilter.prototype.constructor();
+                            }else{
+                                filteredObject = {};
+                            }
                         }
                     
                         for(var key in objectToFilter){
@@ -709,6 +717,13 @@
 
                     return result;
                 },
+                "getValue": function getValue() {
+                    // make an object (args:0+)
+                    var argsLength = arguments.length;
+                    if (argsLength !== 2) throw "getValue function needs 2 arguments";
+
+                    return arguments[0][arguments[1]];
+                },
                 "date": function() {
                     return Date();
                 },
@@ -720,6 +735,14 @@
                 },
                 "toJSON": function makeLambda() {
                     return JSON.stringify(arguments[0]);
+                },
+                "caseInsenstiveCompare": function caseInsenstiveCompare(){
+                    var argsLength = arguments.length;
+                    if (argsLength <= 1) throw "caseInsenstiveCompare function needs more than one argument";
+                    for (var i = 1; i < argsLength; i++) {
+                        if (arguments[i].toLowerCase() !== arguments[i - 1].toLowerCase()) return false;
+                    }
+                    return true;
                 }
 
             };
@@ -738,9 +761,10 @@
             var memoisedTokens = {};
 
             function tokenise(expression, inRecursion, typeOfNest) {
-                if(memoisedTokens[expression]){
-                    return memoisedTokens[expression];
-                }
+                var memoiseKey = expression;
+                // if(memoisedTokens[expression]){
+                    // return memoisedTokens[expression];
+                // }
                 if(!expression){
                     return [];
                 }
@@ -820,7 +844,7 @@
                     throw "Invalid nesting in " + originalExpression;
                 }
                 
-                memoisedTokens[expression] = tokens;
+                memoisedTokens[memoiseKey] = tokens;
                 
                 return tokens;
             }
@@ -928,7 +952,7 @@
                         if (!value) {
                             value = scopedVariables[token.value];
                         }
-                        if (!value) {
+                        if (!scopedVariables.hasOwnProperty(token.value)) {
                             throw strings.UnknownIdentifier.format(token.value);
                         }
 
