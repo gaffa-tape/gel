@@ -562,6 +562,9 @@
                     
                         for(var key in objectToFilter){
                             var item = objectToFilter[key];
+                            if(Array.isArray(item) && isNaN(key)){
+                                continue;
+                            }
                             if(typeof functionToCompare === "function"){
                                 if(functionToCompare.call(this, item)){
                                     filteredObject[key] = item;
