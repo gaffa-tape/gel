@@ -2,7 +2,28 @@
 <html>
 <head>
     <title>expression tester</title>
+    <script>
+        window.gaffa =  {
+
+            model : {
+                array : [1, 2, 3],
+                prop : 15,
+                prop2 : 10,
+                empty: {},
+                get: function (path) {
+                    // slice of []
+                    path = path.slice(1,-1);
+                    var index = path.indexOf("model/");
+                    if (index >= 0) {
+                        path = path.substring(index + 6);
+                    }
+                    return this[path];
+                }
+            }
+        };
+    </script>
     <script src="gel.js" type="text/javascript"></script>
+    <script src="gelFunctions.js" type="text/javascript"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     <script>
 
@@ -21,25 +42,6 @@
                 s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), v);
             }
             return s;
-        };
-
-        gaffa =  {
-
-            model : {
-                array : [1, 2, 3],
-                prop : 15,
-                prop2 : 10,
-                empty: {},
-                get: function (path) {
-                    // slice of []
-                    path = path.slice(1,-1);
-                    var index = path.indexOf("model/");
-                    if (index >= 0) {
-                        path = path.substring(index + 6);
-                    }
-                    return this[path];
-                }
-            }
         };
 
 
@@ -110,7 +112,7 @@
                 resultBox = $('.results'),
                 result;
                                 
-                resultBox.val(gel.parse(expression));
+                resultBox.val(gel.parse(expression).toString());
         });
 
     </script>

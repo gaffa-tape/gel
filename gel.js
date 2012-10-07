@@ -254,36 +254,6 @@
                             return tokenResult(match, match.length, knownTokens.identifier);
                         }
                     },
-                
-                    "path": function(expression) {
-                        if (expression[0] === '[') {
-                            var index = 1,
-                                escapes = 0;
-                            do {
-                                if (expression[index] === '\\' && (expression[index + 1] === '[' || expression[index + 1] === ']')) {
-                                    expression = expression.slice(0, index) + expression.slice(index + 1);
-                                    index++;
-                                    escapes++;
-                                }
-                                else {
-                                    index++;
-                                }
-                            } while (expression[index] !== ']' && index < expression.length);
-                
-                            if (index > 1) {
-                                return tokenResult(
-                                //expression.slice(0, index + 1),
-                
-                                    expression.slice(0, index + 1),
-                                    index + escapes + 1, // don't ask me why, this just works
-                                    null,
-                                    function() {
-                                        return gaffa.model.get(expression.slice(0, index + 1), gaffa.model.get.context, true);
-                                    }
-                                );
-                            }
-                        }
-                    },
                     "period": function convertPeriodToken(expression) {
                         var periodConst = ".";
                         if (expression.slice(0, 1) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
@@ -292,6 +262,8 @@
                 }
             // end token converters
             };
+            
+            this.tokenResult = tokenResult;
             
             this.functions = {
                 "=": function equals() {
@@ -608,6 +580,27 @@
                         return;
                     }
                 },
+                "sort": function sort() {
+                    var args = Array.prototype.slice.call(arguments),
+                        sortedList = [];
+                    if (args.length < 2) {
+                        return args;
+                    }
+                    
+                    sortedList = args[0];
+                    
+                    var functionToCompare = args[1];
+                    
+                    if (Array.isArray(sortedList)) {
+                    
+                        sortedList = sortedList.slice();
+                        
+                        return sortedList.sort(functionToCompare);
+                    
+                    }else {
+                        return;
+                    }
+                },
                 "length": function length() {
                     // get the length of the first argument (args:==1)
                     // will work on any item that defines ".length"
@@ -729,7 +722,6 @@
                     return result;
                 },
                 "getValue": function getValue() {
-                    // make an object (args:0+)
                     var argsLength = arguments.length;
                     if (argsLength !== 2) throw "getValue function needs 2 arguments";
 
@@ -746,14 +738,6 @@
                 },
                 "toJSON": function makeLambda() {
                     return JSON.stringify(arguments[0]);
-                },
-                "caseInsenstiveCompare": function caseInsenstiveCompare(){
-                    var argsLength = arguments.length;
-                    if (argsLength <= 1) throw "caseInsenstiveCompare function needs more than one argument";
-                    for (var i = 1; i < argsLength; i++) {
-                        if (arguments[i].toLowerCase() !== arguments[i - 1].toLowerCase()) return false;
-                    }
-                    return true;
                 }
 
             };
@@ -962,9 +946,9 @@
                         var value = gel.functions[token.value];
                         if (!value) {
                             value = scopedVariables[token.value];
-                        }
-                        if (!scopedVariables.hasOwnProperty(token.value)) {
-                            throw strings.UnknownIdentifier.format(token.value);
+                            if (!scopedVariables.hasOwnProperty(token.value)) {
+                                throw strings.UnknownIdentifier.format(token.value);
+                            }
                         }
 
                         tokens[partIndex] = value;
