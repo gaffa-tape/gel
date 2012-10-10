@@ -1,41 +1,5 @@
 [    
     [
-        "(fromJSON '{\"hello\":[\"world\"]}')",
-        {"hello":["world"]}
-    ],
-    [
-        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (< 1 (length(filter item {item (= item 2)})))})",
-        [[2,2,3]]
-    ],
-    [
-        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})",
-        [[1,2,3]]
-    ],
-	[
-        "(object 'thing' 5).thing",
-        5
-    ],
-    [
-        "(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )",
-        [2,2]
-    ],
-    [
-		"(demoFunc)",
-		123456
-	],
-    [
-    	"(demoFunc",
-		"[[ERROR]]"
-	],
-    [
-		"(demoFunc}",
-		"[[ERROR]]"
-	],
-	[
-		"demoFunc",
-		"function () { return 123456; }"
-	],
-    [
         "1",
         1
     ],
@@ -380,6 +344,50 @@
         "(arrayEquals (array 4 5 6) (array 1 2 3))",
         false
     ],
+	[
+        "(fromJSON '{\"hello\":[\"world\"]}')",
+        {"hello":["world"]}
+    ],
+    [
+        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (< 1 (length(filter item {item (= item 2)})))})",
+        [[2,2,3]]
+    ],
+    [
+        "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})",
+        [[1,2,3]]
+    ],
+    [
+        "(replace 'c1 c2 c3 c4' 'c2' '')",
+        "c1  c3 c4"
+    ],
+    [
+        "(replace 'cool stuff and that' 'stuff' 'stuff stuff')",
+        "cool stuff stuff and that"
+    ],
+	[
+        "(object 'thing' 5).thing",
+        5
+    ],
+    [
+        "(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )",
+        [2,2]
+    ],
+    [
+		"(demoFunc)",
+		123456
+	],
+    [
+    	"(demoFunc",
+		"[[ERROR]]"
+	],
+    [
+		"(demoFunc}",
+		"[[ERROR]]"
+	],
+	[
+		"demoFunc",
+		"function () { return 123456; }"
+	],
     [
         "Zomg wtf is this shit",
         "[[ERROR]]"

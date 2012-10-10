@@ -659,11 +659,7 @@
                     return true;
                 },
                 "format": function format() {
-                    var args = [];
-                    
-                    itemsEach(arguments, function(item){
-                        args.push(item);
-                    });
+                    var args = Array.prototype.slice.call(arguments);
                     
                     return (args.shift()).format(args);
                 },
@@ -697,7 +693,23 @@
                         }
                     });
                     return success;
-                },                
+                },				
+                "replace": function format() {
+                    var item = arguments[0],
+						replaceTarget = arguments[1],
+						replaceWith = arguments[2],
+						lastIndex = -1,
+						startIndex = item.indexOf(replaceTarget);
+						
+						
+						while(startIndex>lastIndex){
+							lastIndex = startIndex;
+							item = item.slice(0, startIndex) + replaceWith + item.slice(startIndex + replaceTarget.length);
+							startIndex = item.indexOf(replaceTarget);
+						}
+                    
+                    return item;
+                },
                 "max": function max() {
                     // get the maximum value of the input items
                     // works on truthy, assumes primitive values
