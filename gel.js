@@ -10,7 +10,8 @@
     "use strict";
 
     // Global Object instantiation
-    var gel = window.gel = window.gel || newGel();
+    var gel = window.gel = window.gel || newGel(),
+		console = window.console || function(){};
 
     function newGel() {
 
@@ -150,6 +151,8 @@
                 
 
             /**    EXPORTS   **/
+			
+            this.tokenResult = tokenResult;
             
             this.tokenConverters = {
                 nests: {
@@ -263,7 +266,6 @@
             // end token converters
             };
             
-            this.tokenResult = tokenResult;
             
             this.functions = {
                 "=": function equals() {
@@ -761,7 +763,7 @@
             this.functions["or"] = this.functions["||"];
             this.functions["not"] = this.functions["!"];
             
-            
+			
 
             /**    MAIN    **/
             
@@ -769,9 +771,9 @@
 
             function tokenise(expression, inRecursion, typeOfNest) {
                 var memoiseKey = expression;
-                // if(memoisedTokens[expression]){
-                    // return memoisedTokens[expression];
-                // }
+                if(memoisedTokens[expression]){
+                    return memoisedTokens[expression];
+                }
                 if(!expression){
                     return [];
                 }
@@ -863,15 +865,120 @@
                     return item.type !== knownTokens.delimitter;
                 });
             }
+			
+			
+			
+			function evaluateSubExpressionToken(token, tokens, partIndex, scopedVariables){
+				// [recursion] - evaluate nesting
+				if(token.tokenName === "function"){
+				
+					token.value = stripDelimiters(token.value);
+				
+					//do not modify token.value as it is used for each itteration.
+					var functionToRun = token.value[token.value.length-1];
+					
+					var argumentsToPassAsVariables;
+					
+					argumentsToPassAsVariables = token.value.slice(0, token.value.length-1);
+					
+					if(functionToRun.type !== knownTokens.subExpression && functionToRun.type !== knownTokens.identifier){
+						throw "Last parameter in function definition was not a sub-expression or identifier";
+					}
+					
+					tokens[partIndex] = function(){
+						var args = Array.prototype.slice.call(arguments),
+							namedArguments = {}; 
+
+						itemsEach(argumentsToPassAsVariables, function(innerToken, index){
+							if(index < args.length){
+								namedArguments[innerToken.value] = args[index];
+							}
+						});   
+						
+						for(var key in scopedVariables){
+							if(namedArguments[key] !== undefined){
+								console.warn("internal scoped variable " + key + "hides value from outer scope");
+							}else{
+								namedArguments[key] = scopedVariables[key];                                        
+							}
+						}                             
+
+						//(filter (array 1 2 3 4 5 4 3 2 1) {item (= item 2) } )
+														
+						return evaluateTokens(functionToRun.value, true, namedArguments);
+					};
+					
+				}else{
+					tokens[partIndex] = evaluateTokens(token.value, true, scopedVariables);
+				}
+			}
+			
+			function evaluateIdentifierToken(token, tokens, partIndex, scopedVariables){
+				// evaluate identifier.
+				// note: variables are evaluted (TODO: variables)
+				// functions on the otherhand cannot be evaluated - because not in first index (so return func itself)
+				var value = scopedVariables[token.value] || gel.functions[token.value];
+				if (!value) {
+					if (!scopedVariables.hasOwnProperty(token.value)) {
+						throw strings.UnknownIdentifier.format(token.value);
+					}
+				}
+
+				tokens[partIndex] = value;
+			}
+			
+			function evaluateValueToken(token, tokens, partIndex, scopedVariables){
+				// if argument, leave as is (evaluate callbacks)
+				if(token.callback){
+					tokens[partIndex] = token.callback(token.value);
+				}else{
+					tokens[partIndex] = token.value;
+				}
+			}
+			
+			function evaluateToken(token, tokens, partIndex, scopedVariables){
+				if (token.type === knownTokens.period) {
+					if(!partIndex){
+						throw "unexpected " + knownTokens.period;
+					}
+					/*
+					if(tokens[partIndex + 1].type !== "identifier"){
+						throw "no identifier following " + knownTokens.period;
+					}
+					*/
+					if(typeof tokens[partIndex - 1] === "object" || typeof tokens[partIndex - 1] === "function"){
+						if(tokens[partIndex - 1].hasOwnProperty(tokens[partIndex + 1].value)){
+							tokens[partIndex - 1] = tokens[partIndex - 1][tokens[partIndex + 1].value];
+						}else{
+							tokens[partIndex - 1] = undefined;
+						}
+					}
+					
+					tokens = tokens.slice(0, partIndex).concat(tokens.slice(partIndex + 2));
+					partIndex--;
+				}else if (token.type === knownTokens.subExpression) {
+					evaluateSubExpressionToken(token, tokens, partIndex, scopedVariables);
+				}
+				else if (token.type === knownTokens.identifier) {
+					evaluateIdentifierToken(token, tokens, partIndex, scopedVariables);
+				}
+				else {
+					evaluateValueToken(token, tokens, partIndex, scopedVariables);
+				}
+				
+				return {tokens: tokens, partIndex: partIndex};
+			}
             
             function evaluateTokens(tokens, isInSubExpression, scopedVariables) {
                 // expected input,
                 // tokens: array of tokens (created by tokenise)
                 
-                scopedVariables = scopedVariables || {};
-
-                var tokensLength = tokens.length;
-                if (tokensLength === 0) {
+				if(typeof isInSubExpression !== 'boolean'){
+					scopedVariables = scopedVariables || isInSubExpression || {};
+					isInSubExpression = false;
+				}
+					
+                if (tokens.length === 0) {
                     // ah empty expression... return undefined
                     return;
                 }
@@ -880,100 +987,22 @@
                 tokens = stripDelimiters(tokens);
 
                 // evaluate  tokens
-                tokensLength = tokens.length;
                 var gelFunction;
-                for (var partIndex = 0; partIndex < tokensLength; partIndex++) {
+                for (var partIndex = 0; partIndex < tokens.length; partIndex++) {
                     var token = tokens[partIndex];
-
-                    // first item is function to execute (only when inside function syntax)
-                    if (partIndex === 0 && isInSubExpression) {
-                        gelFunction = gel.functions[token.value];
-                        if (!gelFunction) {
-                            throw strings.UnknownFunction.format(token.value);
-                        }
-                        continue;
-                    }
-                    
-                    if (token.type === knownTokens.period) {
-                        if(!partIndex){
-                            throw "unexpected " + knownTokens.period;
-                        }
-                        if(tokens[partIndex + 1].type !== "identifier"){
-                            throw "no identifier following " + knownTokens.period;
-                        }
-                        if(typeof tokens[partIndex - 1] === "object" || typeof tokens[partIndex - 1] === "function")
-                        tokens[partIndex - 1] = tokens[partIndex - 1][tokens[partIndex + 1].value];
-                        
-                        tokens = tokens.slice(0, partIndex).concat(tokens.slice(partIndex + 2))
-                        partIndex--;
-                        tokensLength-=2;
-                    }else if (token.type === knownTokens.subExpression) {
-                        // [recursion] - evaluate nesting
-                        if(token.tokenName === "function"){
-                        
-                            token.value = stripDelimiters(token.value);
-                        
-                            //do not modify token.value as it is used for each itteration.
-                            var functionToRun = token.value[token.value.length-1];
-                            
-                            var argumentsToPassAsVariables;
-                            
-                            argumentsToPassAsVariables = token.value.slice(0, token.value.length-1);
-                            
-                            if(functionToRun.type !== knownTokens.subExpression && functionToRun.type !== knownTokens.identifier){
-                                throw "Last parameter in function definition was not a sub-expression or identifier";
-                            }
-                            
-                            tokens[partIndex] = function(){
-                                var args = Array.prototype.slice.call(arguments),
-                                    namedArguments = {}; 
-
-                                itemsEach(argumentsToPassAsVariables, function(innerToken, index){
-                                    if(index < args.length){
-                                        namedArguments[innerToken.value] = args[index];
-                                    }
-                                });   
-                                
-                                for(var key in scopedVariables){
-                                    if(namedArguments[key] !== undefined){
-                                        console.warn("internal scoped variable " + key + "hides value from outer scope");
-                                    }else{
-                                        namedArguments[key] = scopedVariables[key];                                        
-                                    }
-                                }                             
-
-                                //(filter (array 1 2 3 4 5 4 3 2 1) {item (= item 2) } )
-                                                                
-                                return evaluateTokens(functionToRun.value, true, namedArguments);
-                            };
-                            
-                        }else{
-                            tokens[partIndex] = evaluateTokens(token.value, true, scopedVariables);
-                        }
-                    }
-                    else if (token.type === knownTokens.identifier) {
-                        // evaluate identifier.
-                        // note: variables are evaluted (TODO: variables)
-                        // functions on the otherhand cannot be evaluated - because not in first index (so return func itself)
-                        var value = gel.functions[token.value];
-                        if (!value) {
-                            value = scopedVariables[token.value];
-                            if (!scopedVariables.hasOwnProperty(token.value)) {
-                                throw strings.UnknownIdentifier.format(token.value);
-                            }
-                        }
-
-                        tokens[partIndex] = value;
-                    }
-                    else {
-                        // if argument, leave as is (evaluate callbacks)
-                        if(token.callback){
-                            tokens[partIndex] = token.callback(token.value);
-                        }else{
-                            tokens[partIndex] = token.value;
-                        }
-                    }
+					
+					var result = evaluateToken(token, tokens, partIndex, scopedVariables);
+					partIndex = result.partIndex;
+					tokens = result.tokens;
                 }
+
+				// first item is function to execute (only when inside function syntax)
+				if (isInSubExpression) {
+					gelFunction = tokens[0];
+					if (!gelFunction) {
+						throw strings.UnknownFunction.format(token.value);
+					}
+				}
 
                 if (gelFunction) {
                     // [base case] apply evaluated values
@@ -984,7 +1013,8 @@
                     if (tokens.length == 1) {
                         return tokens[0];
                     }
-                    return tokens;
+                    //return tokens;
+					throw "Invalid Syntax: Multiple root level expressions";
                 }
 
             }
@@ -993,9 +1023,9 @@
 
             /**    PUBLICS    **/
             
-            this.parse = function parse(expression) {
+            this.parse = function parse(expression, context) {
                 var tokens = tokenise(expression);
-                return evaluateTokens(tokens);
+                return evaluateTokens(tokens, context);
             };
             
             this.getTokens = function getTokens(expression, tokenName){
@@ -1015,7 +1045,6 @@
                   
                 return filteredTokens;                
             };
-            // end gel
         }
 
         return new Gel();

@@ -60,11 +60,27 @@
 
             return true;
         }
+		
+		var context = {
+			contextProp:10,
+			customFunc: function(item){
+				return item < 10;
+			},
+			console:{
+				log: function(){console.log(arguments)}
+			},
+			anArray: ["a","b","c"],
+			anOtherArray: [1,2,3]
+		}
 
         $(document).ready(function () {
+		
 
             $.getJSON("expressionTests.json", function(tests) {
                 //console.log(tests);
+				
+				var numPassed = 0,				
+					numFailed = 0;
                 
                 for (var index = 0; index < tests.length; index++) {
                     var test = tests[index][0],
@@ -76,7 +92,7 @@
                     var actual = "[[ERROR]]";
                     var exceptionMsg = "";
                     try {
-                        actual = gel.parse(test);
+                        actual = gel.parse(test, context);
                     }
                     catch (ex) {
                         exceptionMsg = ex;
@@ -97,22 +113,42 @@
                     } else {
                         passFail = actual === expected;
                     }
+					
+					passFail ? numPassed++ : numFailed++;
                     
                     var trString = 
                         '<tr class="{0}"><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>'
                         .format((passFail ? "pass" : "fail"), index, test, actual, expected, exceptionMsg);
                     $("#initialtests tbody").append(trString);
                 }
+				
+				if(numFailed){
+					$("#initialtests").before('<h1 class="fail">FAIL</h1>');
+				}else{			
+					$("#initialtests").before('<h1 class="pass">SUCCESS</h1>');
+				}
+				
+				$("#initialtests").before('<h2>' + numPassed + ' Passed, ' + numFailed + ' Failed</h2>');		
                 
          }).error(function() {console.log(arguments)});
         });
         
         $(document).on('click', 'button.run',function(){
              var expression = $('.expressions').val(),
-                resultBox = $('.results'),
+                resultBox = $('.results').removeClass('fail').text(''),
                 result;
+			try{
+				result = gel.parse(expression, context);
+			}catch(error){
+				resultBox.text(error).addClass('fail');
+			}
+				
+			if(typeof result === 'function'){
+				resultBox.text(result.toString());
+			}else{
+				resultBox.text(JSON.stringify(result));
+			}
                                 
-                resultBox.val(gel.parse(expression).toString());
         });
 
     </script>
@@ -134,6 +170,10 @@
             background-color: #ff6b6b;
             
         }
+		
+		.results{
+			font-size:2em;
+		}
         
     </style>
 </head>
@@ -142,7 +182,7 @@
     <textarea class="expressions"></textarea>
     <br />
     <button class="run">Run</button>   <br />
-    <textarea class="results"></textarea>
+    <pre class="results"></pre>
 
     <table id="initialtests">
         <thead>

@@ -395,5 +395,33 @@
     [
         "\"not a well formed\" string\"",
         "[[ERROR]]"
+    ],
+    [
+        "(each anArray (partial concat 'world '))",
+        ["world a","world b","world c"]
+    ],
+    [
+        "(each anArray {string (concat 'world ' string)})",
+        ["world a","world b","world c"]
+    ],
+    [
+        "(each anArray (compose length (partial concat 'world ')))",
+        [7,7,7]
+    ],
+    [
+        "(each anArray {item (length (concat 'world ' item))})",
+        [7,7,7]
+    ],
+    [
+        "(each anArray (compose length (partial (flip concat) 'world ')))",
+        [7,7,7]
+    ],
+    [
+        "(each anArray {item (length (concat item 'world '))})",
+        [7,7,7]
+    ],
+    [
+        "(fold anOtherArray 0 +)",
+        6
     ]
 ]

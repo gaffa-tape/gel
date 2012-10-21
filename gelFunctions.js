@@ -7,6 +7,10 @@
     if(!gel){
         return;   
     }
+	
+	function toArray(args){
+		return Array.prototype.slice.call(args);
+	}
     
     //Token Converters
     
@@ -51,6 +55,89 @@
         return true;
     };
     
+    gel.functions["refine"] = function refine(){
+        var args = toArray(arguments),
+			exclude = typeof args[0] === "boolean" && args.shift(),
+			original = args.shift(),
+			refined = {};
+			
+		for(var i = 0; i < args.length; i++){
+			args[i] = args[i].toString();
+		}
+
+		for(var key in original){
+			if(args.indexOf(key)>=0){
+				!exclude && (refined[key] = original[key]);
+			}else if(exclude){
+				refined[key] = original[key];
+			}
+		}
+		
+        return refined;
+    };
     
+    gel.functions["compose"] = function compose(){
+		var args = toArray(arguments).reverse();
+			
+        return function(){
+			var result = args[0].apply(this, arguments);
+			for(var i = 1; i < args.length; i++){
+				result = args[i].call(this, result);
+			}
+			return result;
+		};
+    };	
     
+    gel.functions["each"] = function each(){
+		var args = toArray(arguments),
+			fn = args.pop(),
+			array = args[0],
+			result = [];
+		
+		if(args.length > 1){
+			array = args;
+		}
+			
+        for(var i = 0; i < array.length; i++){
+			result[i] = fn(array[i]);
+		}
+		
+		return result;
+    };
+    
+    gel.functions["fold"] = function fold(){
+		var args = toArray(arguments),
+			fn = args.pop(),
+			seed = args.pop(),
+			array = args[0],
+			result = seed;
+		
+		if(args.length > 1){
+			array = args;
+		}
+			
+        for(var i = 0; i < array.length; i++){
+			result = fn.call(this, result, array[i]);
+		}
+		
+		return result;
+    };
+    
+    gel.functions["partial"] = function partial(){
+		var args = toArray(arguments),
+			fn = args.shift();
+		
+		return function(){
+			var innerArgs = toArray(arguments);
+			return fn.apply(this, args.concat(innerArgs));
+		};
+    };
+    
+    gel.functions["flip"] = function flip(){
+		var fn = arguments[0];
+		
+		return function(){
+			return fn.apply(this, toArray(arguments).reverse())
+		};
+    };
 })();
