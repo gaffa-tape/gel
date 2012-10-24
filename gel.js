@@ -194,7 +194,7 @@
                         var valids = "0123456789-.Eex",
                             index = 0;
                             
-                        while (valids.indexOf(expression.charAt(index)) >= 0 && ++index) {}
+                        while (valids.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
                 
                         if (index > 0) {
                             var result = parseFloat(expression.slice(0, index));
@@ -237,7 +237,7 @@
                         var operators = "!=<>/&|*%-^?+\\",
                             index = 0;
                             
-                        while (operators.indexOf(expression.charAt(index)) >= 0 && ++index) {}
+                        while (operators.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
                 
                         if (index > 0) {
                             return tokenResult(expression.slice(0, index), index, knownTokens.identifier);
