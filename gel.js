@@ -112,16 +112,16 @@
                 }
                 
             function detectString(expression, stringTerminal, stringType) {
-                if (expression[0] === stringTerminal) {
+                if (expression.charAt(0) === stringTerminal) {
                     var index = 0,
                     escapes = 0;
                            
-                    while (expression[++index] !== stringTerminal)
+                    while (expression.charAt(++index) !== stringTerminal)
                     {
                            if(index >= expression.length){
                                    throw "Unclosed "+ stringType + " string";
                            }
-                           if (expression[index] === '\\' && expression[index + 1] === stringTerminal) {
+                           if (expression.charAt(index) === '\\' && expression.charAt(index+1) === stringTerminal) {
                                    expression = expression.slice(0, index) + expression.slice(index + 1);
                                    escapes++;
                            }
@@ -166,7 +166,7 @@
                 primitives: {
                     "delimitter": function convertDelimitterToken(substring) {
                         var i = 0;
-                        while (i < substring.length && substring[i].trim() === "") {
+                        while (i < substring.length && substring.charAt(i).trim() === "") {
                             i++;
                         }
                 
@@ -191,9 +191,10 @@
                             }
                         }
                 
-                        var valids = "0123456789-.Eex";
-                        var index = 0;
-                        while (valids.indexOf(expression[index]) >= 0 && ++index) {}
+                        var valids = "0123456789-.Eex",
+                            index = 0;
+                            
+                        while (valids.indexOf(expression.charAt(index)) >= 0 && ++index) {}
                 
                         if (index > 0) {
                             var result = parseFloat(expression.slice(0, index));
@@ -230,15 +231,16 @@
                 
                 },
                 others: {
-                    "identifier": function convertIndentifierToken(substring) {
+                    "identifier": function convertIndentifierToken(expression) {
                         // searches for valid identifiers or operators
                         //operators
-                        var operators = "!=<>/&|*%-^?+\\";
-                        var index = 0;
-                        while (operators.indexOf(substring[index]) >= 0 && ++index) {}
+                        var operators = "!=<>/&|*%-^?+\\",
+                            index = 0;
+                            
+                        while (operators.indexOf(expression.charAt(index)) >= 0 && ++index) {}
                 
                         if (index > 0) {
-                            return tokenResult(substring.slice(0, index), index, knownTokens.identifier);
+                            return tokenResult(expression.slice(0, index), index, knownTokens.identifier);
                         }
                 
                         // identifiers (ascii only)
@@ -246,7 +248,7 @@
                         //https://github.com/mathiasbynens/mothereff.in/tree/master/js-variables
                         var valid = /^[$A-Z_][0-9A-Z_$]*/i;
                 
-                        var possibleidentifier = valid.exec(substring);
+                        var possibleidentifier = valid.exec(expression);
                         if (possibleidentifier && possibleidentifier.index === 0) {
                             var match = possibleidentifier[0];
                 
@@ -259,7 +261,7 @@
                     },
                     "period": function convertPeriodToken(expression) {
                         var periodConst = ".";
-                        if (expression.slice(0, 1) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
+                        if (expression.charAt(0) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
                         return;
                     }
                 }

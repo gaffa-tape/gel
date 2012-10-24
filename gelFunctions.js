@@ -15,7 +15,7 @@
     //Token Converters
     
     gel.tokenConverters.others["path"] = function(expression) {
-        if (expression[0] === '[') {
+        if (expression.slice(0,1) === '[') {
             var index = 1,
                 escapes = 0;
             do {
