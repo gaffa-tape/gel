@@ -11,7 +11,7 @@
 
     // Global Object instantiation
     var gel = window.gel = window.gel || newGel(),
-		console = window.console || function(){};
+		console = window.console || { log: function () { } };
 
     function newGel() {
 
@@ -932,7 +932,7 @@
 			function evaluateValueToken(token, tokens, partIndex, scopedVariables){
 				// if argument, leave as is (evaluate callbacks)
 				if(token.callback){
-					tokens[partIndex] = token.callback(token.value);
+					tokens[partIndex] = token.callback(token.value, scopedVariables);
 				}else{
 					tokens[partIndex] = token.value;
 				}
@@ -1047,6 +1047,10 @@
                   
                 return filteredTokens;                
             };
+            
+            this.tokenise = function(expression){
+                return tokenise(expression);
+            }
         }
 
         return new Gel();
