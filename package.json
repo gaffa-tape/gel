@@ -1,0 +1,39 @@
+{
+  "author": "Kory Nunn <knunn187@gmail.com>",
+  "contributors": [
+    {
+      "name": "Kory Nunn",
+      "email": "knunn187@gmail.com"
+    },
+    {
+      "name": "Anthony Truskinger",
+      "email": "anthony.truskinger@gmail.com"
+    },
+    {
+      "name": "Maurice Butler",
+      "email": "maurice.butler@gmail.com"
+    }
+  ],
+  "name": "gel-js",
+  "description": "'Gaffa expression language' is an extensible expression language that lets you safely input epxressions into an application",
+  "version": "0.0.2",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gaffa-tape/gel.git"
+  },
+  "main": "gel",
+  "engines": {
+    "node": ">=0.6"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gel",
+    "gaffa",
+    "expression"
+  ],
+  "license": "MIT"
+}

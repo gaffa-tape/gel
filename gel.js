@@ -6,12 +6,28 @@
 
 //THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(function(undefined) {
+(function(global, undefined) {
     "use strict";
-
-    // Global Object instantiation
-    var gel = window.gel = window.gel || newGel(),
-		console = window.console || { log: function () { } };
+    
+    var gel = newGel(),
+		console = global.console || { log: function () { } };
+        
+    // Browser or Node?
+    if(global.window){ // Browser
+        global.gel = gel;
+    }else{ // Node
+        for(var key in gel){
+            if(gel.hasOwnProperty(key)){
+            global[key] = gel[key];
+            }
+        }
+    }
+    
+    function stringFormat(string, values){
+        return string.replace(/{(\d+)}/g, function (match, number) {
+            return (values[number] == undefined || values[number] == null) ? match : values[number];
+        }).replace(/{(\d+)}/g, "");
+    }
 
     function newGel() {
 
@@ -665,7 +681,7 @@
                 "format": function format() {
                     var args = Array.prototype.slice.call(arguments);
                     
-                    return (args.shift()).format(args);
+                    return stringFormat(args.shift(), args);
                 },
                 "contains": function contains() {
                     var args = Array.prototype.slice.call(arguments),
@@ -698,7 +714,7 @@
                     });
                     return success;
                 },				
-                "replace": function format() {
+                "replace": function replace() {
                     var item = arguments[0],
 						replaceTarget = arguments[1],
 						replaceWith = arguments[2],
@@ -800,7 +816,7 @@
                                 
                                 if (result.nestEnded) {
                                     if (result.subExpressionType !== typeOfNest) {
-                                        throw strings.BadNesting.format(totalCharsProcessed + 1, result.subExpressionType, typeOfNest);
+                                        throw stringFormat(strings.BadNesting, totalCharsProcessed + 1, result.subExpressionType, typeOfNest);
                                     }
                     
                                     // [base case]
@@ -922,7 +938,7 @@
 				var value = scopedVariables[token.value] || gel.functions[token.value];
 				if (!value) {
 					if (!scopedVariables.hasOwnProperty(token.value)) {
-						throw strings.UnknownIdentifier.format(token.value);
+						throw stringFormat(strings.UnknownIdentifier, token.value);
 					}
 				}
 
@@ -1002,7 +1018,7 @@
 				if (isInSubExpression) {
 					gelFunction = tokens[0];
 					if (!gelFunction) {
-						throw strings.UnknownFunction.format(token.value);
+						throw stringFormat(strings.UnknownFunction, token.value);
 					}
 				}
 
@@ -1056,4 +1072,8 @@
         return new Gel();
     }
 
-})();
+})(this);
+
+
+
+ 
