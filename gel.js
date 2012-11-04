@@ -816,7 +816,7 @@
                                 
                                 if (result.nestEnded) {
                                     if (result.subExpressionType !== typeOfNest) {
-                                        throw stringFormat(strings.BadNesting, totalCharsProcessed + 1, result.subExpressionType, typeOfNest);
+                                        throw stringFormat(strings.BadNesting, [totalCharsProcessed + 1, result.subExpressionType, typeOfNest]);
                                     }
                     
                                     // [base case]
@@ -938,7 +938,7 @@
 				var value = scopedVariables[token.value] || gel.functions[token.value];
 				if (!value) {
 					if (!scopedVariables.hasOwnProperty(token.value)) {
-						throw stringFormat(strings.UnknownIdentifier, token.value);
+						throw stringFormat(strings.UnknownIdentifier, [token.value]);
 					}
 				}
 
@@ -1018,14 +1018,14 @@
 				if (isInSubExpression) {
 					gelFunction = tokens[0];
 					if (!gelFunction) {
-						throw stringFormat(strings.UnknownFunction, token.value);
+						throw stringFormat(strings.UnknownFunction, [token.value]);
 					}
 				}
 
                 if (gelFunction) {
                     // [base case] apply evaluated values
                     tokens.shift();
-                    return gelFunction.apply(this, tokens);
+                    return gelFunction.apply(scopedVariables, tokens);
                 }
                 else {
                     if (tokens.length == 1) {
