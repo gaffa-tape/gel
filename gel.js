@@ -363,6 +363,30 @@
                     }
                     return result;
                 },
+                ">=": function greaterThanOrEqualTo() {
+                    var argsLength = arguments.length,
+                        result = false;
+                    if (argsLength <= 1) throw "greaterThanOrEqualTo function needs more than one argument";
+                    for (var i = 0; i < argsLength-1; i++) {
+                        result = arguments[i] >= arguments[i+1];
+                        if(!result){
+                            break;
+                        }
+                    }
+                    return result;
+                },
+                "<=": function lessThanOrEqualTo() {
+                    var argsLength = arguments.length,
+                        result = false;
+                    if (argsLength <= 1) throw "lessThanOrEqualTo function needs more than one argument";
+                    for (var i = 0; i < argsLength-1; i++) {
+                        result = arguments[i] <= arguments[i+1];
+                        if(!result){
+                            break;
+                        }
+                    }
+                    return result;
+                },
                 "&": function andStrict() {
                     // does a strict "and", only accept true/false values
                     var argsLength = arguments.length;
