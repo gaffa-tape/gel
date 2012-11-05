@@ -84,7 +84,7 @@
             var knownTokens = {
                 subExpression: "subExpression",
                 empty: "void",
-                delimitter: "delimitter",
+                delimiter: "delimiter",
                 identifier: "identifier",
                 period: "period"
                 
@@ -173,20 +173,20 @@
             this.tokenConverters = {
                 nests: {
                     "parentheses": function convertParenthesisToken(substring) {
-                        return nestingToken(substring, "(", ")", "parantheses");
+                        return nestingToken(substring, "(", ")", "parentheses");
                     },
                     "function": function convertBracesToken(substring) {
                         return nestingToken(substring, "{", "}", "function");
                     }
                 },
                 primitives: {
-                    "delimitter": function convertDelimitterToken(substring) {
+                    "delimiter": function convertdelimiterToken(substring) {
                         var i = 0;
                         while (i < substring.length && substring.charAt(i).trim() === "") {
                             i++;
                         }
                 
-                        if (i) return tokenResult(substring.slice(0, i), i, knownTokens.delimitter);
+                        if (i) return tokenResult(substring.slice(0, i), i, knownTokens.delimiter);
                     },
                     "string": function convertStringToken(expression) {
                         return detectString(expression, '"', "double quoted");
@@ -442,6 +442,12 @@
 
                     return total;
                 },
+                "?": function ternary() {
+                    var argsLength = arguments.length;
+                    if (argsLength !== 3) throw "ternary function received wrong number of arguments. Excepted 3 given:" + argsLength;
+
+                    return arguments[0] ? arguments[1] : arguments[2];
+                },
                 "isNaN": function testNaN(){
                     // tests if all input values are NaN (args:0+)
                     var argsLength = arguments.length;
@@ -492,7 +498,7 @@
                 "slice": function slice() {
                     // does a slice
                     var argsLength = arguments.length;
-                    if (argsLength > 3 || argsLength === 0) throw "Slice function recieved wrong number of arguments. Excpected [1,3] given:" + arguments;
+                    if (argsLength > 3 || argsLength === 0) throw "Slice function received wrong number of arguments. Excepted [1,3] given:" + arguments;
 
                     var item, start, end;
                     switch (argsLength) {
@@ -643,7 +649,7 @@
                     // does structural equality on the array,
                     // for each array item, JS truthy equality done (while compare references for objects)
                     if (arguments.length < 2) {
-                        throw "arrayEquals did not recieve enough arguments, #args=" + arguments.length;
+                        throw "arrayEquals did not receive enough arguments, #args=" + arguments.length;
                     }
 
                     var firstLength;
@@ -880,7 +886,7 @@
             // poor delimiters... no one loves them :(
             function stripDelimiters(tokens){
                 return arrayWhere(tokens, function(item) {
-                    return item.type !== knownTokens.delimitter;
+                    return item.type !== knownTokens.delimiter;
                 });
             }
 			
@@ -892,7 +898,7 @@
 				
 					token.value = stripDelimiters(token.value);
 				
-					//do not modify token.value as it is used for each itteration.
+					//do not modify token.value as it is used for each iteration.
 					var functionToRun = token.value[token.value.length-1];
 					
 					var argumentsToPassAsVariables;
@@ -933,8 +939,8 @@
 			
 			function evaluateIdentifierToken(token, tokens, partIndex, scopedVariables){
 				// evaluate identifier.
-				// note: variables are evaluted (TODO: variables)
-				// functions on the otherhand cannot be evaluated - because not in first index (so return func itself)
+				// note: variables are evaluated (TODO: variables)
+				// functions on the other hand cannot be evaluated - because not in first index (so return func itself)
 				var value = scopedVariables[token.value] || gel.functions[token.value];
 				if (!value) {
 					if (!scopedVariables.hasOwnProperty(token.value)) {
@@ -1001,7 +1007,7 @@
                     return;
                 }
 
-                // filter out delmitters
+                // filter out delimiters
                 tokens = stripDelimiters(tokens);
 
                 // evaluate  tokens
