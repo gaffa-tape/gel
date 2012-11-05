@@ -337,7 +337,7 @@
                     }
                     return true;
                 },
-                ">": function greaterThen() {
+                ">": function greaterThan() {
                     // test strict inequality (args:2+)
                     var argsLength = arguments.length,
                         result = false;
@@ -350,7 +350,7 @@
                     }
                     return result;
                 },
-                "<": function lessThen() {
+                "<": function lessThan() {
                     // test strict inequality (args:2+)
                     var argsLength = arguments.length,
                         result = false;
