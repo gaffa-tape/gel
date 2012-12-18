@@ -442,6 +442,19 @@
 
                     return sum;
                 },
+                "-": function subtract() {
+                    // subtract all arguments (force numbers) (args:0+)
+                    var sum;
+                    itemsEach(arguments, function (value) {
+                        if (sum === undefined) {
+                            sum = parseFloat(value)
+                        } else {
+                            sum -= !isNaN(value) && parseFloat(value);
+                        }
+                    });
+
+                    return sum;
+                },
                 "*": function product() {
                     // multiply all arguments (force numbers) (args:0+)
                     var total = 1;
@@ -466,9 +479,16 @@
 
                     return total;
                 },
+                "floor": function floor() {
+                    if(arguments.length !== 1){
+                        throw "floor function received wrong number of arguments. Expected 1, given:" + argsLength;
+                    }
+                        
+                    return Math.floor(arguments[0]);
+                },
                 "?": function ternary() {
                     var argsLength = arguments.length;
-                    if (argsLength !== 3) throw "ternary function received wrong number of arguments. Excepted 3 given:" + argsLength;
+                    if (argsLength !== 3) throw "ternary function received wrong number of arguments. Expected 3, given:" + argsLength;
 
                     return arguments[0] ? arguments[1] : arguments[2];
                 },
@@ -790,10 +810,17 @@
                     return arguments[0][arguments[1]];
                 },
                 "date": function() {
-                    return Date();
-                },
-                "demoFunc": function() {
-                    return 123456;
+                    if (arguments.length === 0) {
+                        return new Date();
+                    }
+
+                    if (arguments.length === 1) {
+                        return new Date(arguments[0]);
+                    }
+
+                    if (arguments.length > 1) {
+                        throw "date function received wrong number of arguments. Expected 0 or 1, given: " + arguments.length;
+                    }
                 },
                 "fromJSON": function makeLambda() {
                     return JSON.parse(arguments[0]);
