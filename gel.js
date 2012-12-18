@@ -818,9 +818,7 @@
                         return new Date(arguments[0]);
                     }
 
-                    if (arguments.length > 1) {
-                        throw "date function received wrong number of arguments. Expected 0 or 1, given: " + arguments.length;
-                    }
+                    throw "date function received wrong number of arguments. Expected 0 or 1, given: " + arguments.length;
                 },
                 "addDays" : function addDays(){
                      if (arguments.length !== 2){
