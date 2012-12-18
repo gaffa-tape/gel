@@ -822,6 +822,14 @@
                         throw "date function received wrong number of arguments. Expected 0 or 1, given: " + arguments.length;
                     }
                 },
+                "addDays" : function addDays(){
+                     if (arguments.length !== 2){
+                        throw "addDays function received wrong number of arguments. Expected 2, given: " + arguments.length;
+                     }
+                    var baseDate = arguments[0];
+
+                     return new Date(baseDate.setDate(baseDate.getDate() + arguments[1]));
+                },
                 "fromJSON": function makeLambda() {
                     return JSON.parse(arguments[0]);
                 },
