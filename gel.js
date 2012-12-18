@@ -807,7 +807,7 @@
                     var argsLength = arguments.length;
                     if (argsLength !== 2) throw "getValue function needs 2 arguments";
 
-                    return arguments[0][arguments[1]];
+                    return arguments[0] && arguments[0][arguments[1]];
                 },
                 "date": function() {
                     if (arguments.length === 0) {
