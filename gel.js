@@ -14,11 +14,11 @@
         
     // Browser or Node?
     if(global.window){ // Browser
-        global.Gel = gel;
+        global.gel = gel;
     }else{ // Node
         for(var key in gel){
             if(gel.hasOwnProperty(key)){
-            global[key] = gel[key];
+                global[key] = gel[key];
             }
         }
     }
@@ -166,121 +166,121 @@
             
         var memoisedTokens = {};
         
-        function gel() {}
+        function Gel() {}
         
         var tokenConverters = {
-            nests: {
-                "parentheses": function convertParenthesisToken(substring) {
-                    return nestingToken(substring, "(", ")", "parentheses");
+                nests: {
+                    "parentheses": function convertParenthesisToken(substring) {
+                        return nestingToken(substring, "(", ")", "parentheses");
+                    },
+                    "function": function convertBracesToken(substring) {
+                        return nestingToken(substring, "{", "}", "function");
+                    }
                 },
-                "function": function convertBracesToken(substring) {
-                    return nestingToken(substring, "{", "}", "function");
+                primitives: {
+                    "delimiter": function convertdelimiterToken(substring) {
+                        var i = 0;
+                        while (i < substring.length && substring.charAt(i).trim() === "") {
+                            i++;
+                        }
+                
+                        if (i) return tokenResult(substring.slice(0, i), i, knownTokens.delimiter);
+                    },
+                    "string": function convertStringToken(expression) {
+                        return detectString(expression, '"', "double quoted");
+                    },
+                    "singleQuoteString": function convertStringToken(expression) {
+                        return detectString(expression, "'", "single quoted");
+                    },
+                    "number": function convertNumberToken(expression) {
+                        var specials = {
+                            "NaN": Number.NaN,
+                            "-NaN": Number.NaN,
+                            "Infinity": Infinity,
+                            "-Infinity": -Infinity
+                        };
+                        for (var key in specials) {
+                            if (expression.slice(0, key.length) === key) {
+                                return tokenResult(specials[key], key.length);
+                            }
+                        }
+                
+                        var valids = "0123456789-.Eex",
+                            index = 0;
+                            
+                        while (valids.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
+                
+                        if (index > 0) {
+                            var result = parseFloat(expression.slice(0, index));
+                            if(isNaN(result)){
+                                return;
+                            }
+                            return tokenResult(result, index);
+                        }
+                
+                        return;
+                
+                    },
+                
+                    "boolean": function convertBooleanToken(expression) {
+                        if (expression.slice(0, 4) === "true") {
+                            return tokenResult(true, 4);
+                        }
+                        else if (expression.slice(0, 5) === "false") {
+                            return tokenResult(false, 5);
+                        }
+                
+                        return;
+                    },
+                    "null": function convertNullToken(expression) {
+                        var nullConst = "null";
+                        if (expression.slice(0, nullConst.length) === nullConst) return tokenResult(null, nullConst.length);
+                        return;
+                    },
+                    "undefined": function convertUndefinedToken(expression) {
+                        var undefinedConst = "undefined";
+                        if (expression.slice(0, undefinedConst.length) === undefinedConst) return tokenResult(undefined, undefinedConst.length);
+                        return;
+                    }
+                
+                },
+                others: {
+                    "identifier": function convertIndentifierToken(expression) {
+                        // searches for valid identifiers or operators
+                        //operators
+                        var operators = "!=<>/&|*%-^?+\\",
+                            index = 0;
+                            
+                        while (operators.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
+                
+                        if (index > 0) {
+                            return tokenResult(expression.slice(0, index), index, knownTokens.identifier);
+                        }
+                
+                        // identifiers (ascii only)
+                        //http://www.geekality.net/2011/08/03/valid-javascript-identifier/
+                        //https://github.com/mathiasbynens/mothereff.in/tree/master/js-variables
+                        var valid = /^[$A-Z_][0-9A-Z_$]*/i;
+                
+                        var possibleidentifier = valid.exec(expression);
+                        if (possibleidentifier && possibleidentifier.index === 0) {
+                            var match = possibleidentifier[0];
+                
+                            if (reservedkeywords.indexOf(match) >= 0) {
+                                return;
+                            }
+                
+                            return tokenResult(match, match.length, knownTokens.identifier);
+                        }
+                    },
+                    "period": function convertPeriodToken(expression) {
+                        var periodConst = ".";
+                        if (expression.charAt(0) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
+                        return;
+                    }
                 }
             },
-            primitives: {
-                "delimiter": function convertdelimiterToken(substring) {
-                    var i = 0;
-                    while (i < substring.length && substring.charAt(i).trim() === "") {
-                        i++;
-                    }
-            
-                    if (i) return tokenResult(substring.slice(0, i), i, knownTokens.delimiter);
-                },
-                "string": function convertStringToken(expression) {
-                    return detectString(expression, '"', "double quoted");
-                },
-                "singleQuoteString": function convertStringToken(expression) {
-                    return detectString(expression, "'", "single quoted");
-                },
-                "number": function convertNumberToken(expression) {
-                    var specials = {
-                        "NaN": Number.NaN,
-                        "-NaN": Number.NaN,
-                        "Infinity": Infinity,
-                        "-Infinity": -Infinity
-                    };
-                    for (var key in specials) {
-                        if (expression.slice(0, key.length) === key) {
-                            return tokenResult(specials[key], key.length);
-                        }
-                    }
-            
-                    var valids = "0123456789-.Eex",
-                        index = 0;
-                        
-                    while (valids.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
-            
-                    if (index > 0) {
-                        var result = parseFloat(expression.slice(0, index));
-                        if(isNaN(result)){
-                            return;
-                        }
-                        return tokenResult(result, index);
-                    }
-            
-                    return;
-            
-                },
-            
-                "boolean": function convertBooleanToken(expression) {
-                    if (expression.slice(0, 4) === "true") {
-                        return tokenResult(true, 4);
-                    }
-                    else if (expression.slice(0, 5) === "false") {
-                        return tokenResult(false, 5);
-                    }
-            
-                    return;
-                },
-                "null": function convertNullToken(expression) {
-                    var nullConst = "null";
-                    if (expression.slice(0, nullConst.length) === nullConst) return tokenResult(null, nullConst.length);
-                    return;
-                },
-                "undefined": function convertUndefinedToken(expression) {
-                    var undefinedConst = "undefined";
-                    if (expression.slice(0, undefinedConst.length) === undefinedConst) return tokenResult(undefined, undefinedConst.length);
-                    return;
-                }
-            
-            },
-            others: {
-                "identifier": function convertIndentifierToken(expression) {
-                    // searches for valid identifiers or operators
-                    //operators
-                    var operators = "!=<>/&|*%-^?+\\",
-                        index = 0;
-                        
-                    while (operators.indexOf(expression.charAt(index)||null) >= 0 && ++index) {}
-            
-                    if (index > 0) {
-                        return tokenResult(expression.slice(0, index), index, knownTokens.identifier);
-                    }
-            
-                    // identifiers (ascii only)
-                    //http://www.geekality.net/2011/08/03/valid-javascript-identifier/
-                    //https://github.com/mathiasbynens/mothereff.in/tree/master/js-variables
-                    var valid = /^[$A-Z_][0-9A-Z_$]*/i;
-            
-                    var possibleidentifier = valid.exec(expression);
-                    if (possibleidentifier && possibleidentifier.index === 0) {
-                        var match = possibleidentifier[0];
-            
-                        if (reservedkeywords.indexOf(match) >= 0) {
-                            return;
-                        }
-            
-                        return tokenResult(match, match.length, knownTokens.identifier);
-                    }
-                },
-                "period": function convertPeriodToken(expression) {
-                    var periodConst = ".";
-                    if (expression.charAt(0) === periodConst) return tokenResult(".", periodConst.length, knownTokens.period);
-                    return;
-                }
-            }
-        },
-        functions = {};
+            functions = {};
 
         function tokenise(expression, inRecursion, typeOfNest) {
             var memoiseKey = expression;
@@ -531,14 +531,14 @@
 
         }
         
-        gel.prototype.tokenResult = tokenResult;
+        Gel.prototype.tokenResult = tokenResult;
         
-        gel.prototype.parse = function parse(expression, context) {
+        Gel.prototype.parse = function parse(expression, context) {
             var tokens = this.tokenise(expression);
             return evaluateTokens(tokens, context);
         };
         
-        gel.prototype.getTokens = function getTokens(expression, tokenName){
+        Gel.prototype.getTokens = function getTokens(expression, tokenName){
             var tokens = tokenise(expression),
                 filteredTokens = [];
                                     
@@ -556,9 +556,9 @@
             return filteredTokens;                
         };
         
-        gel.prototype.tokenise = tokenise;
+        Gel.prototype.tokenise = tokenise;
             
-        gel.prototype.tokenConverters = tokenConverters;        
+        Gel.prototype.tokenConverters = tokenConverters;        
             
         if(!settings.noDefaultFunctions){
             
@@ -1199,18 +1199,18 @@
                 };
             }
             
-            gel.prototype.functions = functions;
+            Gel.prototype.functions = functions;
             
             
             // aliases
             // WARN: overwriting object equals func? possible major poo poo
-            gel.prototype.functions["equals"] = gel.prototype.functions["="];
-            gel.prototype.functions["and"] = gel.prototype.functions["&&"];
-            gel.prototype.functions["or"] = gel.prototype.functions["||"];
-            gel.prototype.functions["not"] = gel.prototype.functions["!"];
+            Gel.prototype.functions["equals"] = Gel.prototype.functions["="];
+            Gel.prototype.functions["and"] = Gel.prototype.functions["&&"];
+            Gel.prototype.functions["or"] = Gel.prototype.functions["||"];
+            Gel.prototype.functions["not"] = Gel.prototype.functions["!"];
         }
         
-        return new gel();
+        return new Gel();
     }
     
 
