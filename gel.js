@@ -9,16 +9,16 @@
 (function(global, undefined) {
     "use strict";
     
-    var gel = newGel,
+    var Gel = newGel,
 		console = global.console || { log: function () { } };
         
     // Browser or Node?
     if(global.window){ // Browser
-        global.gel = gel;
+        global.Gel = Gel;
     }else{ // Node
-        for(var key in gel){
-            if(gel.hasOwnProperty(key)){
-                global[key] = gel[key];
+        for(var key in Gel){
+            if(Gel.hasOwnProperty(key)){
+                global[key] = Gel[key];
             }
         }
     }
@@ -67,11 +67,11 @@
     /**    INTERNALS   **/
     
     var strings = {
-        UnknownFunction: "Function is undefined in  given expression: {0}. (add it to the gel.functions object)",
+        UnknownFunction: "Function is undefined in  given expression: {0}. (add it to the Gel.functions object)",
         UnparseableToken: "Unable to determine next token in expression: ",
         BadNesting: "Invalid nesting. Un-opened {1} encountered at character:{0}.",//:{0}, {1} {2},
         BadStringTerminals: "Unmatched string terminals (the \" things)",
-        UnknownIdentifier: "An unknown identifier ({0}) has been encountered (it did not resolve to a function or variable). If it is meant to be a function add it to the gel.functions object."
+        UnknownIdentifier: "An unknown identifier ({0}) has been encountered (it did not resolve to a function or variable). If it is meant to be a function add it to the Gel.functions object."
 
     };
     
@@ -499,7 +499,7 @@
             tokens = stripDelimiters(tokens);
 
             // evaluate  tokens
-            var gelFunction;
+            var GelFunction;
             for (var partIndex = 0; partIndex < tokens.length; partIndex++) {
                 var token = tokens[partIndex];
                 
@@ -510,16 +510,16 @@
 
             // first item is function to execute (only when inside function syntax)
             if (isInSubExpression) {
-                gelFunction = tokens[0];
-                if (!gelFunction) {
+                GelFunction = tokens[0];
+                if (!GelFunction) {
                     throw stringFormat(strings.UnknownFunction, [token.value]);
                 }
             }
 
-            if (gelFunction) {
+            if (GelFunction) {
                 // [base case] apply evaluated values
                 tokens.shift();
-                return gelFunction.apply(scopedVariables, tokens);
+                return GelFunction.apply(scopedVariables, tokens);
             }
             else {
                 if (tokens.length == 1) {
