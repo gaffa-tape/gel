@@ -114,11 +114,43 @@
             ],
             [
                 "(|| 2 0 3)",
-                3
+                2
+            ],
+            [
+                "(|| 0 0 0)",
+                undefined
+            ],
+            [
+                "(|| false 'If this test passes, lazy evaluation has been implemented' (throwError))",
+                'If this test passes, lazy evaluation has been implemented'
+            ],
+            [
+                "(| 2 0 3 false true)",
+                true
+            ],
+            [
+                "(| 2 0 3 false false)",
+                false
             ],
             [
                 "(&& 1 2)",
                 2
+            ],
+            [
+                "(+ 0 2)",
+                2
+            ],
+            [
+                "(+ 1 2 3 -4)",
+                2
+            ],
+            [
+                "(- 1 2)",
+                -1
+            ],
+            [
+                "(- 1 2 8)",
+                -9
             ],
             [
                 "(/ 4 2)",
@@ -354,11 +386,11 @@
                 "2012-12-17T11:54:49.462Z"
             ],
             [
-                "(addDays (date 1355745289462) 7)",
+                "(date.addDays (date 1355745289462) 7)",
                 "2012-12-24T11:54:49.462Z"
             ],
             [
-                "(addDays (date 1355745289462) -7)",
+                "(date.addDays (date 1355745289462) -7)",
                 "2012-12-10T11:54:49.462Z"
             ],
             [
@@ -541,6 +573,10 @@
             return 123456;
         };
         
+        gel.functions["throwError"] = function() {
+            throw "error";
+        };
+        
         // Add a custom token converter
         gel.tokenConverters.others["path"] = function(expression) {
             if (expression.slice(0,1) === '[') {
@@ -659,7 +695,8 @@
                 var trString = 
                     '<tr class="{0}"><td>{1}</td><td>{2}</td><td>{3}</td><td>{4}</td><td>{5}</td></tr>'
                     .format((passFail ? "pass" : "fail"), index, test, actual, expected, exceptionMsg);
-                $("#initialtests tbody").append(trString);
+                    
+                passFail ? $("#initialtests .passedTests").append(trString) : $("#initialtests .failedTests").append(trString);
             }
             
             if(numFailed){
@@ -728,7 +765,10 @@
                 <th>Id</th><th>Input</th><th>Actual</th><th>Expected</th><th>Exception</th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class="failedTests">
+
+        </tbody>
+        <tbody class="passedTests">
 
         </tbody>
     </table>

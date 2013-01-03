@@ -687,27 +687,28 @@
             functions['|'] = function orStrict() {
                 // does a strict "or", only accept true/false values
                 var argsLength = arguments.length;
-                if (argsLength > 1) {
-                    for (var i = 1; i < argsLength; i++) {
-                        if (!(arguments[i] === true || arguments[i - 1] === true)) return false;
+                    
+                if(argsLength){
+                    for (var i = 0; i < argsLength; i++) {
+                        if(arguments[i] === true){
+                            return arguments[i];
+                        }
                     }
-                    return true;
                 }
-                else {
-                    return argsLength === true;
-                }
+                return false;
             };
             functions['||'] = function orTruthy() {
                 // does a truthy "or", like the JS "||"
-                var argsLength = arguments.length,
-                    last = arguments[0];
+                var argsLength = arguments.length;
                     
                 if(argsLength){
-                    for (var i = 0; i < argsLength - 1; i++) {
-                        last = arguments[i] || arguments[i + 1];
+                    for (var i = 0; i < argsLength; i++) {
+                        if(arguments[i]){
+                            return arguments[i];
+                        }
                     }
                 }
-                return last;
+                return;
             };
             functions['+'] = function add() {
                 // add all arguments (force numbers) (args:0+)
@@ -1096,7 +1097,7 @@
 
                 throw "date function received wrong number of arguments. Expected 0 or 1, given: " + arguments.length;
             };
-            functions["addDays"] = function addDays(){
+            functions['date']["addDays"] = function addDays(){
                  if (arguments.length !== 2){
                     throw "addDays function received wrong number of arguments. Expected 2, given: " + arguments.length;
                  }
