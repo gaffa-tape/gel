@@ -93,6 +93,9 @@
         var argIndex = 0;
             args = {
                 length: fnArguments.length,
+                raw: function(){
+                    return fnArguments.slice();
+                },
                 get: function(index){
                     var arg = fnArguments[index];
                         
@@ -684,9 +687,13 @@
         }
     }
 
-    function tokenise(expression) {
+    function tokenise(expression, memoisedTokens) {
         if(!expression){
             return [];
+        }
+        
+        if(memoisedTokens && memoisedTokens[expression]){
+            return memoisedTokens[expression].slice();
         }
         
         var originalExpression = expression,
@@ -730,6 +737,8 @@
             
         } while (expression);
         
+        memoisedTokens && (memoisedTokens[expression] = tokens.slice());
+        
         return tokens;
     }
 
@@ -750,7 +759,8 @@
     
     
     global.Gel = function(){    
-        var memoisedExpressions = {};
+        var memoisedTokens = {},
+            memoisedExpressions = {};
         function gel(){};
         gel.Token = Token;
         gel.createNestingParser = createNestingParser;
@@ -767,7 +777,7 @@
             if(memoisedExpressions[memoiseKey]){
                 expressionTree = memoisedExpressions[memoiseKey].slice();
             } else{            
-                expressionTree = gelInstance.parse(gelInstance.tokenise(expression));
+                expressionTree = gelInstance.parse(gelInstance.tokenise(expression, memoisedTokens));
                 
                 memoisedExpressions[memoiseKey] = expressionTree;
             }
