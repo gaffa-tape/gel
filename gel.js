@@ -789,6 +789,7 @@
         gel.tokenConverters = tokenConverters;
         gel.reservedKeywords = reservedKeywords;
         gel.functions = functions;
+        gel.callWith = callWith;
         return gel;
     };
     
