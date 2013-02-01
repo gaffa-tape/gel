@@ -1,4 +1,4 @@
-(function(window, undefined){
+(function(global, undefined){
 
     function fastEach(items, callback) {
         for (var i = 0; i < items.length; i++) {
@@ -24,7 +24,7 @@
     function createNewScope(scope){
         var newScope = {};
                 
-        simpleExtend(newScope, scope);
+        newScope.__proto__ = scope;
         
         return newScope;
     }
@@ -40,10 +40,9 @@
     function noop(){}
     
     function stringFormat(string, values){    
-        var args = arguments;
         return string.replace(/{(\d+)}/g, function(match, number) { 
-            return typeof args[number] != 'undefined'
-              ? args[number]
+            return typeof values[number] != 'undefined'
+              ? values[number]
               : match
             ;
         });
@@ -128,8 +127,6 @@
         return fn(scope, args);
     }
 
-    var reservedkeywords = ["true", "false", "NaN", "-NaN", "Infinity", "-Infinity", "null", "undefined"];
-
     function detectString(converter, expression, stringTerminal, stringType) {
         if (expression.charAt(0) === stringTerminal) {
             var index = 0,
@@ -196,6 +193,25 @@
                             return fnBody.result;
                         }
                     }
+                },
+                
+                // Trust me, period is a kind of nest.
+                
+                "period": {
+                    tokenise: function convertPeriodToken(substring) {
+                        var periodConst = ".";
+                        if (substring.charAt(0) === periodConst) return new Token(this, ".", 1);
+                        return;
+                    },
+                    parse: function(tokens, position){
+                        this.targetToken = tokens.splice(position-1,1)[0];
+                        this.identifierToken = tokens.splice(position,1)[0];
+                        return -1;
+                    },
+                    evaluate:function(scope){
+                        this.targetToken.evaluate(scope);
+                        this.result = (this.targetToken.result.hasOwnProperty(this.identifierToken.original) && this.targetToken.result[this.identifierToken.original]) || undefined;
+                    }
                 }
             },
             primitives: {
@@ -226,7 +242,7 @@
                     },
                     parse:noop,
                     evaluate:evaluateValueType
-                },
+                },            
                 "number": {
                     tokenise: function convertNumberToken(substring) {
                         var specials = {
@@ -260,50 +276,10 @@
                     evaluate:function(){
                         this.result = parseFloat(this.original);
                     }
-                },
-            
-                "boolean": {
-                    tokenise: function convertBooleanToken(substring) {
-                        if (substring.slice(0, 4) === "true") {
-                            return new Token(this, "true", 4);
-                        }
-                        else if (substring.slice(0, 5) === "false") {
-                            return new Token(this, "false", 5);
-                        }
-                
-                        return;
-                    },
-                    parse: noop,
-                    evaluate:function(){
-                        this.result = this.original === "true";
-                    }
-                },
-                "null": {
-                    tokenise: function convertNullToken(substring) {
-                        var nullConst = "null";
-                        if (substring.slice(0, nullConst.length) === nullConst) return new Token(this, "null", nullConst.length);
-                        return;
-                    },
-                    parse: noop,
-                    evaluate:function(){
-                        this.result = null;
-                    }
-                },
-                "undefined": {
-                    tokenise: function convertUndefinedToken(substring) {
-                        var undefinedConst = "undefined";
-                        if (substring.slice(0, undefinedConst.length) === undefinedConst) return new Token(this, "undefined", undefinedConst.length);
-                        return;
-                    },
-                    parse: noop,
-                    evaluate:function(){
-                        this.result = undefined;
-                    }
                 }
-            
             },
-            other: {
-                "identifier": {
+            identifiers:{
+                "identifier":{
                     tokenise: function convertIndentifierToken(substring) {
                         // searches for valid identifiers or operators
                         //operators
@@ -325,10 +301,6 @@
                         if (possibleidentifier && possibleidentifier.index === 0) {
                             var match = possibleidentifier[0];
                 
-                            if (reservedkeywords.indexOf(match) >= 0) {
-                                return;
-                            }
-                
                             return new Token(this, match, match.length);
                         }
                     },                    
@@ -336,22 +308,46 @@
                     evaluate:function(scope){
                         this.result = scope[this.original];
                     }
-                },
-                "period": {
-                    tokenise: function convertPeriodToken(substring) {
-                        var periodConst = ".";
-                        if (substring.charAt(0) === periodConst) return new Token(this, ".", 1);
-                        return;
-                    },
-                    parse: function(tokens, position){
-                        this.targetToken = tokens.splice(position-1,1)[0];
-                        this.identifierToken = tokens.splice(position,1)[0];
-                        return -1;
-                    },
-                    evaluate:function(scope){
-                        this.targetToken.evaluate(scope);
-                        this.result = (this.targetToken.result.hasOwnProperty(this.identifierToken.original) && this.targetToken.result[this.identifierToken.original]) || undefined;
+                }
+            }
+        },        
+        reservedKeywords = {            
+            "boolean": {
+                tokenise: function convertBooleanToken(identifier) {
+                    if (identifier.original === "true") {
+                        return new Token(this, "true", 4);
                     }
+                    else if (identifier.original === "false") {
+                        return new Token(this, "false", 5);
+                    }
+            
+                    return;
+                },
+                parse: noop,
+                evaluate:function(){
+                    this.result = this.original === "true";
+                }
+            },
+            "null": {
+                tokenise: function convertNullToken(identifier) {
+                    var nullConst = "null";
+                    if (identifier.original === nullConst) return new Token(this, "null", nullConst.length);
+                    return;
+                },
+                parse: noop,
+                evaluate:function(){
+                    this.result = null;
+                }
+            },
+            "undefined": {
+                tokenise: function convertUndefinedToken(identifier) {
+                    var undefinedConst = "undefined";
+                    if (identifier.original === undefinedConst) return new Token(this, "undefined", undefinedConst.length);
+                    return;
+                },
+                parse: noop,
+                evaluate:function(){
+                    this.result = undefined;
                 }
             }
         },
@@ -478,8 +474,7 @@
             },
             "filter": function(scope, args) {
                 var args = args.all(),
-                    filteredList = [],
-                    keyFilteredList = [];
+                    filteredList = [];
                     
                 if (args.length < 2) {
                     return args;
@@ -494,16 +489,13 @@
                         if(typeof functionToCompare === "function"){
                             if(callWith(functionToCompare, scope, [item])){ 
                                 filteredList.push(item);
-                                keyFilteredList.push(index);
                             }
                         }else{
                             if(item === functionToCompare){ 
                                 filteredList.push(item);
-                                keyFilteredList.push(index);
                             }
                         }
                     });
-                    filteredList.__gaffaKeys__ = keyFilteredList;
                     return filteredList;
                 
                 }else {
@@ -696,28 +688,43 @@
         if(!expression){
             return [];
         }
-        // split expression parts into tokens
+        
         var originalExpression = expression,
             tokens = [],
             totalCharsProcessed = 0,
-            converterTypes = [this.tokenConverters.nests, this.tokenConverters.primitives, this.tokenConverters.other],
-            previousLength;
+            previousLength,
+            reservedKeywordToken;
         
-
         do {
             previousLength = expression.length;
-            // for each registered token converter, see if we can get a real value
-            fastEach(converterTypes, function(converterList){
-                var token = scanForToken(converterList, expression);
-                if(token){                    
-                    expression = expression.slice(token.length);
-                    totalCharsProcessed += token.length;                    
-                    tokens.push(token);
-                    return true;
+            
+            var token;
+            
+            //Check for nests
+            token = scanForToken(this.tokenConverters.nests, expression);
+            
+            if(!token){                
+                //Check for primatives
+                token = scanForToken(this.tokenConverters.primitives, expression);
+            }
+            
+            if(!token){
+                //Check for identifiers
+                token = scanForToken(this.tokenConverters.identifiers, expression);
+                if(token){
+                    //Check for reserved keywords
+                    token = scanForToken(this.reservedKeywords, token) || token;
                 }
-            });
-
-            if (expression.length === previousLength) {
+            }
+            
+            if(token){
+                expression = expression.slice(token.length);
+                totalCharsProcessed += token.length;                    
+                tokens.push(token);
+                continue;
+            }
+            
+            if(expression.length === previousLength){
                 throw errors.UnparseableToken + expression;
             }
             
@@ -742,34 +749,27 @@
     }
     
     
-    window.Gel = function(){    
+    global.Gel = function(){    
         var memoisedExpressions = {};
         function gel(){};
         gel.Token = Token;
         gel.createNestingParser = createNestingParser;
         gel.parse = parse;
         gel.tokenise = tokenise;
-        gel.evaluate = function(expression, outerScope){
+        gel.evaluate = function(expression, scope){
             var gelInstance = this,
                 memoiseKey = expression,
                 expressionTree,
-                lastToken,
-                scope = this.functions || {};
+                lastToken;
+                
+            scope.__proto__ = this.functions || {};
                 
             if(memoisedExpressions[memoiseKey]){
                 expressionTree = memoisedExpressions[memoiseKey].slice();
-            } else{
-                    
-                for(var key in outerScope){
-                    if(outerScope.hasOwnProperty(key)){
-                        scope[key] = outerScope[key];
-                    }
-                }
-            
+            } else{            
                 expressionTree = gelInstance.parse(gelInstance.tokenise(expression));
                 
                 memoisedExpressions[memoiseKey] = expressionTree;
-            
             }
                 
             lastToken = evaluate(expressionTree , scope).slice(-1)[0];
@@ -777,6 +777,7 @@
             return lastToken && lastToken.result;
         };
         gel.tokenConverters = tokenConverters;
+        gel.reservedKeywords = reservedKeywords;
         gel.functions = functions;
         return gel;
     };

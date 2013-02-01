@@ -22,8 +22,8 @@
             }
         };
     </script>
-    <script src="gel.js" type="text/javascript"></script>                
-    <script src="jquery.min.js"></script>
+    <script src="gel.old.js" type="text/javascript"></script>                
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
     
     <script>
         window.tests = [    
@@ -31,15 +31,11 @@
                 "1",
                 1
             ],
-            [
-                "-2",
-                -2
-            ],
-            [
+                [
                 "2.4e9",
                 2400000000
             ],
-            [
+                [
                 "1.0E-3",
                 0.001
             ],
@@ -76,6 +72,10 @@
                 "\"Hello\" \"World\""
             ],
             [
+                "-2",
+                -2
+            ],
+            [
                 "true",
                 true
             ],
@@ -90,10 +90,8 @@
             [
                 "undefined"
             ],
-            [
-                "(|| trueStartingIdentifier 2)",
-                2
-            ],
+            
+            
             [
                 "(= 1 1)",
                 true
@@ -120,7 +118,7 @@
             ],
             [
                 "(|| 0 0 0)",
-                0
+                undefined
             ],
             [
                 "(|| false 'If this test passes, lazy evaluation has been implemented' (throwError))",
@@ -144,7 +142,7 @@
             ],
             [
                 "(+ 1 2 3 -4)",
-                3
+                2
             ],
             [
                 "(- 1 2)",
@@ -152,7 +150,7 @@
             ],
             [
                 "(- 1 2 8)",
-                -1
+                -9
             ],
             [
                 "(/ 4 2)",
@@ -175,15 +173,11 @@
                 false
             ],
             [
-                "(isNaN NaN)",
+                "(isNaN NaN (/ 0 0) NaN)",
                 true
             ],
             [
-                "(isNaN (/ 0 0))",
-                true
-            ],
-            [
-                "(isNaN Infinity)",
+                "(isNaN NaN Infinity NaN)",
                 false
             ],
             [
@@ -199,15 +193,15 @@
                 false
             ],
             [
-                "(== (/ 64 8) (/ 4 3))",
-                false
-            ],
-            [
-                "(= null undefined)",
+                "(== (/ 64 8 6) (/ 4 3))",
                 true
             ],
             [
-                "(== null undefined)",
+                "(= () null undefined)",
+                true
+            ],
+            [
+                "(== () null undefined)",
                 false
             ],
             [
@@ -243,32 +237,12 @@
                 false
             ],
             [
-                "(> 3 2)",
+                "(> 3 2 1)",
                 true
             ],
             [
-                "(> 1 2)",
+                "(> 1 2 3)",
                 false
-            ],
-            [
-                "(< 1 1)",
-                false
-            ],
-            [
-                "(< 2 1)",
-                false
-            ],
-            [
-                "(< 1 2)",
-                true
-            ],
-            [
-                "(< 3 2)",
-                false
-            ],
-            [
-                "(< 1 2)",
-                true
             ],
             [
                 "(? true 1 2)",
@@ -288,7 +262,7 @@
             ],
             [
                 "(? true 1)",
-                1
+                "[[ERROR]]"
             ],
             [
                 "(>= 1 2)",
@@ -303,11 +277,11 @@
                 true
             ],
             [
-                "(>= 2 3)",
+                "(>= 3 2 3)",
                 false
             ],
             [
-                "(>= 3 3)",
+                "(>= 3 2 1)",
                 true
             ],
             [
@@ -323,11 +297,11 @@
                 true
             ],
             [
-                "(<= 2 1)",
+                "(<= 1 2 1)",
                 false
             ],
             [
-                "(<= 2 2)",
+                "(<= 1 2 3)",
                 true
             ],
             [
@@ -405,7 +379,7 @@
             ],
             [
                 "(date 123 123 123)",
-                null
+                "[[ERROR]]"
             ],
             [
                 "(date 1355745289462)",
@@ -424,8 +398,7 @@
                 5
             ],
             [
-                "()",
-                '[[ERROR]]'
+                "()"
             ],
             [
                 "[model/array]",
@@ -453,10 +426,6 @@
             ],
             [
                 "(concat [model/prop] \" good sir\")",
-                "[[ERROR]]"
-            ],
-            [
-                "(concat (toString [model/prop]) \" good sir\")",
                 "15 good sir"
             ],
             [
@@ -484,24 +453,32 @@
                 true
             ],
             [
-                "(compare (array 1 2 3) (array 1 2 3) =)",
+                "(arrayEquals (array 1 2 3) (array 1 2 3))",
                 true
             ],
             [
-                "(compare (array 1 5 3) (array 1 5 3) (array 1 5 3) (array 1 5 3) =)",
+                "(arrayEquals (array 1 5 3) (array 1 5 3) (array 1 5 3) (array 1 5 3))",
                 true
             ],
             [
-                "(compare (array 4 5 6) (array 1 2 3) =)",
-                false
+                "(arrayEquals (array) (remove 1 2 3 (array 1 2 3)))",
+                true
             ],
             [
                 "(== (+ 10 15.5) (concat \"25\" \".5\"))",
                 false
             ],
             [
-                "(refine true (object 'stuff' 1 'things' 2 'majigger' 3) 'stuff' 'things')",
-                {majigger:3}
+                "(remove 1 2 3 (array 1 2 3 4))",
+                [4]
+            ],
+            [
+                "(arrayEquals (array) (remove 1 2 3 (array 1 2 3 4)))",
+                false
+            ],
+            [
+                "(arrayEquals (array 4 5 6) (array 1 2 3))",
+                false
             ],
             [
                 "(fromJSON '{\"hello\":[\"world\"]}')",
@@ -514,6 +491,14 @@
             [
                 "(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})",
                 [[1,2,3]]
+            ],
+            [
+                "(replace 'c1 c2 c3 c4' 'c2' '')",
+                "c1  c3 c4"
+            ],
+            [
+                "(replace 'cool stuff and that' 'stuff' 'stuff stuff')",
+                "cool stuff stuff and that"
             ],
             [
                 "(object 'thing' 5).thing",
@@ -540,47 +525,40 @@
                 "function () { return 123456; }"
             ],
             [
-                "Zomg wtf is this shit"
+                "Zomg wtf is this shit",
+                "[[ERROR]]"
             ],
             [
                 "\"not a well formed\" string\"",
                 "[[ERROR]]"
             ],
             [
-                "(map anArray (partial concat 'world '))",
+                "(each anArray (partial concat 'world '))",
                 ["world a","world b","world c"]
             ],
             [
-                "(map anArray {string (concat 'world ' string)})",
+                "(each anArray {string (concat 'world ' string)})",
                 ["world a","world b","world c"]
             ],
             [
-                "(map anArray (compose length (partial concat 'world ')))",
+                "(each anArray (compose length (partial concat 'world ')))",
                 [7,7,7]
             ],
             [
-                "(map anArray {item (length (concat 'world ' item))})",
+                "(each anArray {item (length (concat 'world ' item))})",
                 [7,7,7]
             ],
             [
-                "(map anArray (compose length (partial (flip concat) 'world ')))",
-                "I honestly don't know"
+                "(each anArray (compose length (partial (flip concat) 'world ')))",
+                [7,7,7]
             ],
             [
-                "(map anArray {item (length (concat item 'world '))})",
+                "(each anArray {item (length (concat item 'world '))})",
                 [7,7,7]
             ],
             [
                 "(fold anOtherArray 0 +)",
                 6
-            ],
-            [
-                "(compare (array 1 2 3) (array 2 3 4) <)",
-                true
-            ],
-            [
-                "(compare (array 1 2 3) (array 2 3 4) >)",
-                false
             ]
         ];
         
@@ -600,38 +578,37 @@
         };
         
         // Add a custom token converter
-        gel.tokenConverters.primitives["path"] = {
-            tokenise:function(substring){
-                if (substring.charAt(0) === '[') {
-                    var index = 1;
-                        
-                    do {
-                        if (
-                            (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
-                            (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
-                        ) {
-                            index++;
-                        }
-                        else if(substring.charAt(index) === ']'){                        
-                            var original = substring.slice(0, index+1);
-                            
-                            return new gel.Token(
-                                this,
-                                original,
-                                original.length
-                            );
-                        }
+        gel.tokenConverters.others["path"] = function(expression) {
+            if (expression.slice(0,1) === '[') {
+                var index = 1,
+                    escapes = 0;
+                do {
+                    if (expression[index] === '\\' && (expression[index + 1] === '[' || expression[index + 1] === ']')) {
+                        expression = expression.slice(0, index) + expression.slice(index + 1);
                         index++;
-                    } while (index < substring.length);
-                }
-            },
-            parse: function(){},
-            evaluate: function(){
-                this.result = gaffa.model.get(this.original, gaffa.model.get.context, true);
-            }
-        }
+                        escapes++;
+                    }
+                    else {
+                        index++;
+                    }
+                } while (expression[index] !== ']' && index < expression.length);
         
-        String.prototype.format = String.prototype.format || function () {
+                if (index > 1) {
+                    return gel.tokenResult(
+                    //expression.slice(0, index + 1),
+        
+                        expression.slice(0, index + 1),
+                        index + escapes + 1, // don't ask me why, this just works
+                        null,
+                        function() {
+                            return gaffa.model.get(expression.slice(0, index + 1), gaffa.model.get.context, true);
+                        }
+                    );
+                }
+            }
+        };
+        
+        String.prototype.format = String.prototype.f = function () {
             var s = this,
                 i = arguments.length;
 
@@ -691,7 +668,7 @@
                 var actual = "[[ERROR]]";
                 var exceptionMsg = "";
                 try {
-                    actual = gel.evaluate(test, context);
+                    actual = gel.parse(test, context);
                 }
                 catch (ex) {
                     exceptionMsg = ex;
@@ -736,7 +713,7 @@
                 resultBox = $('.results').removeClass('fail').text(''),
                 result;
 			try{
-				result = gel.evaluate(expression, context);
+				result = gel.parse(expression, context);
 			}catch(error){
 				resultBox.text(error).addClass('fail');
 			}
