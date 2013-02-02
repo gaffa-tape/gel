@@ -737,7 +737,7 @@
             
         } while (expression);
         
-        memoisedTokens && (memoisedTokens[expression] = tokens.slice());
+        memoisedTokens && (memoisedTokens[originalExpression] = tokens.slice());
         
         return tokens;
     }
