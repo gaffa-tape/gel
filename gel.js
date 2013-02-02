@@ -759,9 +759,10 @@
     
     
     global.Gel = function(){    
-        var memoisedTokens = {},
+        var gel = {},
+            memoisedTokens = {},
             memoisedExpressions = {};
-        function gel(){};
+            
         gel.Token = Token;
         gel.createNestingParser = createNestingParser;
         gel.parse = parse;
@@ -786,9 +787,20 @@
             
             return lastToken && lastToken.result;
         };
-        gel.tokenConverters = tokenConverters;
-        gel.reservedKeywords = reservedKeywords;
-        gel.functions = functions;
+        gel.tokenConverters = {
+            nests:{
+                __proto__: tokenConverters.nests
+            },
+            primitives:{
+                __proto__: tokenConverters.primitives
+            },
+            identifiers:{
+                __proto__: tokenConverters.identifiers
+            }
+        };
+        gel.reservedKeywords = {__proto__:reservedKeywords};
+        gel.functions = {__proto__:functions};
+        
         gel.callWith = callWith;
         return gel;
     };
