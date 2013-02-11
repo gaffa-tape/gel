@@ -89,12 +89,21 @@
         this.result = this.original;
     }
     
-    function callWith(fn, scope, fnArguments){    
+    function callWith(fn, scope, fnArguments, calledToken){    
         var argIndex = 0;
             args = {
+                callee: calledToken,
                 length: fnArguments.length,
-                raw: function(){
-                    return fnArguments.slice();
+                raw: function(evaluated){
+                    if(evaluated){
+                        var rawArgs = fnArguments.slice();   
+                        fastEach(rawArgs, function(arg){
+                            if(arg instanceof Token){
+                                arg.evaluate(scope);
+                            } 
+                        });
+                    }
+                    return rawArgs;
                 },
                 get: function(index){
                     var arg = fnArguments[index];
@@ -170,7 +179,7 @@
                         
                         functionToken.evaluate(scope);
                             
-                        this.result = callWith(functionToken.result, scope, this.childTokens.slice(1));
+                        this.result = callWith(functionToken.result, scope, this.childTokens.slice(1), this);
                     }
                 },
                 "function": {
@@ -767,10 +776,11 @@
         gel.createNestingParser = createNestingParser;
         gel.parse = parse;
         gel.tokenise = tokenise;
-        gel.evaluate = function(expression, scope){
+        gel.evaluate = function(expression, scope, returnAsTokens){
             var gelInstance = this,
                 memoiseKey = expression,
                 expressionTree,
+                evaluatedTokens,
                 lastToken;
                 
             scope.__proto__ = this.functions || {};
@@ -782,8 +792,14 @@
                 
                 memoisedExpressions[memoiseKey] = expressionTree;
             }
+            
+            evaluatedTokens = evaluate(expressionTree , scope);
+            
+            if(returnAsTokens){
+                return evaluatedTokens.slice();
+            }
                 
-            lastToken = evaluate(expressionTree , scope).slice(-1)[0];
+            lastToken = evaluatedTokens.slice(-1).pop();
             
             return lastToken && lastToken.result;
         };
