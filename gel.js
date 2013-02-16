@@ -82,25 +82,25 @@
                 // because the opening token should remove its closing token.
                 throw errors.BadNesting;
             }
-        }
+        };
     }
     
     function evaluateValueType(){
         this.result = this.original;
     }
     
-    function callWith(fn, scope, fnArguments, calledToken){    
+    function callWith(fn, scope, fnArguments, calledToken){
         var argIndex = 0;
             args = {
                 callee: calledToken,
                 length: fnArguments.length,
                 raw: function(evaluated){
+                    var rawArgs = fnArguments.slice();
                     if(evaluated){
-                        var rawArgs = fnArguments.slice();   
                         fastEach(rawArgs, function(arg){
                             if(arg instanceof Token){
                                 arg.evaluate(scope);
-                            } 
+                            }
                         });
                     }
                     return rawArgs;
@@ -111,7 +111,7 @@
                     if(arg instanceof Token){
                         arg.evaluate(scope);
                         return arg.result;
-                    } 
+                    }
                     return arg;
                 },
                 hasNext: function(){
@@ -125,7 +125,7 @@
                         fnArguments[argIndex].evaluate(scope);
                         return fnArguments[argIndex++].result;
                     }
-                    return fnArguments[argIndex++];                                    
+                    return fnArguments[argIndex++];
                 },
                 all: function(){
                     var allArgs = [];
@@ -153,7 +153,7 @@
                            expression = expression.slice(0, index) + expression.slice(index + 1);
                            escapes++;
                    }
-            } 
+            }
 
             return new Token(
                    converter,
