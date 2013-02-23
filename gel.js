@@ -538,7 +538,8 @@
                 return target.slice(start, end);
             },
             "last":function(scope, args){
-                return args.next().slice(-1).pop();
+                var value = args.next();
+                return value ? value.slice(-1).pop() : undefined;
             },
             "length":function(scope, args){
                 return args.next().length;
