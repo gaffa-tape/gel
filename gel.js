@@ -222,7 +222,13 @@
                     },
                     evaluate:function(scope){
                         this.targetToken.evaluate(scope);
-                        this.result = (this.targetToken.result && (typeof this.targetToken.result === 'object' || typeof this.targetToken.result === 'function') && this.targetToken.result.hasOwnProperty(this.identifierToken.original) && this.targetToken.result[this.identifierToken.original]) || undefined;
+                        if(
+                            this.targetToken.result &&
+                            (typeof this.targetToken.result === 'object' || typeof this.targetToken.result === 'function')
+                            && this.targetToken.result.hasOwnProperty(this.identifierToken.original)
+                        ){
+                            this.result = this.targetToken.result[this.identifierToken.original];
+                        }
                     }
                 }
             },
