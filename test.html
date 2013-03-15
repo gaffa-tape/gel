@@ -376,6 +376,18 @@
                 [{"prop":5},{"prop":5}]
             ],
             [
+                "(first (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})",
+                {"prop":5}
+            ],
+            [
+                "(sort (array 7 2 3 5 6 4) {a b (- a b)})",
+                [2,3,4,5,6,7]
+            ],
+            [
+                "(sort (array (object 'prop' 6)(object 'prop' 7)(object 'prop' 5)) {a b (- a.prop b.prop)})",
+                [{"prop":5},{"prop":6},{"prop":7}]
+            ],
+            [
                 "(contains 'Hello World' 'WAT')",
                 false
             ],
@@ -452,11 +464,14 @@
                 15
             ],
             [
-                "(concat [model/prop] \" good sir\")",
-                "[[ERROR]]"
+                "(concat [model/prop] \" good sir\")"
             ],
             [
                 "(concat (toString [model/prop]) \" good sir\")",
+                "15 good sir"
+            ],
+            [
+                "(join \"\" [model/prop] \" good sir\")",
                 "15 good sir"
             ],
             [
@@ -581,6 +596,14 @@
             [
                 "(compare (array 1 2 3) (array 2 3 4) >)",
                 false
+            ],
+            [
+                "(getValue anArray '1')",
+                "b"
+            ],
+            [
+                "(apply | anArray)",
+                "c"
             ]
         ];
         

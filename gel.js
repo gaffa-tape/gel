@@ -222,7 +222,7 @@
                     },
                     evaluate:function(scope){
                         this.targetToken.evaluate(scope);
-                        this.result = (this.targetToken.result.hasOwnProperty(this.identifierToken.original) && this.targetToken.result[this.identifierToken.original]) || undefined;
+                        this.result = (this.targetToken.result && (typeof this.targetToken.result === 'object' || typeof this.targetToken.result === 'function') && this.targetToken.result.hasOwnProperty(this.identifierToken.original) && this.targetToken.result[this.identifierToken.original]) || undefined;
                     }
                 }
             },
@@ -484,6 +484,25 @@
                 
                 return result;
             },
+            "sort": function(scope, args) {
+                var args = args.all(),
+                    result;
+                
+                var array = args[0];
+                var functionToCompare = args[1];
+                
+                if (Array.isArray(array)) {
+                
+                    result = array.sort(function(a,b){
+                        return callWith(functionToCompare, scope, [a,b]);
+                    });
+
+                    return result;
+                
+                }else {
+                    return;
+                }
+            },
             "filter": function(scope, args) {
                 var args = args.all(),
                     filteredList = [];
@@ -492,8 +511,8 @@
                     return args;
                 }
                 
-                var array = args[0];
-                var functionToCompare = args[1];
+                var array = args[0],
+                    functionToCompare = args[1];
                 
                 if (Array.isArray(array)) {
                     
@@ -508,18 +527,45 @@
                             }
                         }
                     });
-                    return filteredList;
+                    return filteredList;                
+                }
+            },
+            "first": function(scope, args) {
+                var args = args.all(),
+                    result;
+                    
+                if (args.length < 2) {
+                    return args;
+                }
                 
-                }else {
-                    return;
+                var array = args[0],
+                    functionToCompare = args[1];
+                
+                if (Array.isArray(array)) {
+                    
+                    fastEach(array, function(item, index){
+                        if(callWith(functionToCompare, scope, [item])){ 
+                            result = item;
+                            return true;
+                        }
+                    });
+                    return result;              
                 }
             },
             "concat":function(scope, args){
                 var result = args.next();
                 while(args.hasNext()){
+                    if(result == null || !result.concat){
+                        return undefined;
+                    }
                     result = result.concat(args.next());
                 }
                 return result;
+            },
+            "join":function(scope, args){
+                args = args.all();
+
+                return args.slice(1).join(args[0]);
             },
             "slice":function(scope, args){
                 var target = args.next(),
@@ -538,10 +584,24 @@
                 return target.slice(start, end);
             },
             "last":function(scope, args){
-                return args.next().slice(-1).pop();
+                var array = args.next();
+                if(!Array.isArray(array)){
+                    return;
+                }
+                return array.slice(-1).pop();
             },
             "length":function(scope, args){
                 return args.next().length;
+            },
+            "getValue":function(scope, args){
+                var target = args.next(),
+                    key = args.next();
+
+                if(!target || typeof target !== 'object'){
+                    return;
+                }
+
+                return target[key];
             },
             "compare":function(scope, args){
                 var args = args.all(),
@@ -682,6 +742,12 @@
                     
                     return result;
                 };
+            },
+            "apply": function(scope, args){
+                var fn = args.next()
+                    outerArgs = args.next();
+                    
+                return callWith(fn, scope, outerArgs);
             }
         };
         
@@ -775,7 +841,9 @@
         gel.Token = Token;
         gel.createNestingParser = createNestingParser;
         gel.parse = parse;
-        gel.tokenise = tokenise;
+        gel.tokenise = function(expression){
+            return tokenise.call(this, expression, memoisedTokens);
+        };
         gel.evaluate = function(expression, scope, returnAsTokens){
             var gelInstance = this,
                 memoiseKey = expression,
