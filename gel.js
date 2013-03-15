@@ -517,6 +517,8 @@
                     return args;
                 }
                 
+
+
                 var array = args[0],
                     functionToCompare = args[1];
                 
@@ -536,7 +538,7 @@
                     return filteredList;                
                 }
             },
-            "first": function(scope, args) {
+            "findOne": function(scope, args) {
                 var args = args.all(),
                     result;
                     
@@ -544,6 +546,8 @@
                     return args;
                 }
                 
+
+
                 var array = args[0],
                     functionToCompare = args[1];
                 
@@ -591,6 +595,7 @@
             },
             "last":function(scope, args){
                 var array = args.next();
+
                 if(!Array.isArray(array)){
                     return;
                 }

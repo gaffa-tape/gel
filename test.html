@@ -376,7 +376,7 @@
                 [{"prop":5},{"prop":5}]
             ],
             [
-                "(first (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})",
+                "(findOne (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})",
                 {"prop":5}
             ],
             [
@@ -410,6 +410,10 @@
             [
                 "(last (array 1 2 3 \"abc\"))",
                 "abc"
+            ],
+            [
+                "(last (filter [/somthing/empty] {item (= item 'foo')}))",
+                undefined
             ],
             [
                 "(object \"key\" \"value\")",
@@ -465,6 +469,7 @@
             ],
             [
                 "(concat [model/prop] \" good sir\")"
+
             ],
             [
                 "(concat (toString [model/prop]) \" good sir\")",
@@ -687,21 +692,21 @@
 
             return true;
         }
-		
-		var context = {
-			contextProp:10,
-			customFunc: function(item){
-				return item < 10;
-			},
-			console:{
-				log: function(){console.log(arguments)}
-			},
-			anArray: ["a","b","c"],
-			anOtherArray: [1,2,3]
-		}
+        
+        var context = {
+            contextProp:10,
+            customFunc: function(item){
+                return item < 10;
+            },
+            console:{
+                log: function(){console.log(arguments)}
+            },
+            anArray: ["a","b","c"],
+            anOtherArray: [1,2,3]
+        }
 
         $(document).ready(function () {
-            var numPassed = 0,				
+            var numPassed = 0,              
                 numFailed = 0;
             
             for (var index = 0; index < tests.length; index++) {
@@ -747,7 +752,7 @@
             
             if(numFailed){
                 $("#initialtests").before('<h1 class="fail">FAIL</h1>');
-            }else{			
+            }else{          
                 $("#initialtests").before('<h1 class="pass">SUCCESS</h1>');
             }
             
@@ -758,17 +763,17 @@
              var expression = $('.expressions').val(),
                 resultBox = $('.results').removeClass('fail').text(''),
                 result;
-			try{
-				result = gel.evaluate(expression, context);
-			}catch(error){
-				resultBox.text(error).addClass('fail');
-			}
-				
-			if(typeof result === 'function'){
-				resultBox.text(result.toString());
-			}else{
-				resultBox.text(JSON.stringify(result));
-			}
+            try{
+                result = gel.evaluate(expression, context);
+            }catch(error){
+                resultBox.text(error).addClass('fail');
+            }
+                
+            if(typeof result === 'function'){
+                resultBox.text(result.toString());
+            }else{
+                resultBox.text(JSON.stringify(result));
+            }
                                 
         });
 
@@ -791,10 +796,10 @@
             background-color: #ff6b6b;
             
         }
-		
-		.results{
-			font-size:2em;
-		}
+        
+        .results{
+            font-size:2em;
+        }
         
     </style>
 </head>
