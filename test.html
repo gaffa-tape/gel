@@ -408,6 +408,14 @@
                 true
             ],
             [
+                "(charAt 'things')",
+                't'
+            ],
+            [
+                "(charAt 'things' 4)",
+                'g'
+            ],
+            [
                 "(last (array 1 2 3 \"abc\"))",
                 "abc"
             ],
@@ -418,6 +426,10 @@
             [
                 "(object \"key\" \"value\")",
                 {"key": "value"}
+            ],
+            [
+                "(date)",
+                new Date().toISOString() + ' - Or there about...'
             ],
             [
                 "(date 123 123 123)",

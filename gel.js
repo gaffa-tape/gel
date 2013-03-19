@@ -20,14 +20,27 @@
             }
         }
     }
-    
-    function createNewScope(scope){
-        var newScope = {};
-                
-        newScope.__proto__ = scope;
-        
-        return newScope;
+
+    function Scope(oldScope){
+        this.__scope__ = {};
+        this.__outerScope__ = oldScope;
     }
+    Scope.prototype.get = function(key){
+        if(key in this.__scope__){
+            return this.__scope__[key];
+        }
+        return this.__outerScope__ && this.__outerScope__.get(key);
+    };
+    Scope.prototype.set = function(key, value){
+        this.__scope__[key] = value;
+        return this;
+    };
+    Scope.prototype.add = function(obj){
+        for(var key in obj){
+            this.__scope__[key] = obj[key];
+        }
+        return this;
+    };
 
     var errors = {
         UnknownFunction: "Function is undefined in  given expression: {0}. (add it to the Gel.functions object)",
@@ -173,7 +186,7 @@
                     },
                     parse:createNestingParser(new RegExp('^\\($'),new RegExp('^\\)$')),
                     evaluate:function(scope){
-                        scope = createNewScope(scope);
+                        scope = new Scope(scope);
                             
                         var functionToken = this.childTokens[0];
                         
@@ -190,14 +203,14 @@
                     },
                     parse: createNestingParser(new RegExp('^\\{$'),new RegExp('^\\}$')),
                     evaluate:function(scope){
-                        var fnBody = this.childTokens[this.childTokens.length-1],
-                            parameterNames = this.childTokens.slice(0, this.childTokens.length-1);
+                        var parameterNames = this.childTokens.slice(),
+                            fnBody = parameterNames.pop();
                                                 
                         this.result = function(scope, args){
-                            scope = createNewScope(scope);
+                            scope = new Scope(scope);
                                 
                             for(var i = 0; i < parameterNames.length; i++){
-                                scope[parameterNames[i].original] = args.get(i);
+                                scope.set(parameterNames[i].original, args.get(i));
                             }
                             
                             fnBody.evaluate(scope);
@@ -324,7 +337,7 @@
                     },                    
                     parse:noop,
                     evaluate:function(scope){
-                        this.result = scope[this.original];
+                        this.result = scope.get(this.original);
                     }
                 }
             }
@@ -663,6 +676,29 @@
                 });
                 return success;
             },
+            "charAt":function(scope, args){
+                var target = args.next(),
+                    position;
+
+                if(args.hasNext()){
+                    position = args.next();
+                }
+
+                if(typeof target !== 'string'){
+                    return;
+                }
+
+                return target.charAt(position);
+            },
+            "toLowerCase":function(scope, args){
+                var target = args.next();
+
+                if(typeof target !== 'string'){
+                    return undefined;
+                }
+
+                return target.toLowerCase();
+            },
             "format": function format(scope, args) {
                 var args = args.all();
                 
@@ -690,7 +726,7 @@
             },
             "date": (function(){
                 var date = function(scope, args) {
-                    return new Date(args.length > 1 ? args.all() : args.next());
+                    return args.length ? new Date(args.length > 1 ? args.all() : args.next()) : new Date();
                 };
                 
                 date.addDays = function(scope, args){
@@ -843,11 +879,50 @@
         return tokens;
     }
     
-    
     global.Gel = function(){    
         var gel = {},
             memoisedTokens = {},
             memoisedExpressions = {};
+
+
+        var stats = {};
+
+        gel.printTopExpressions = function(){
+            var allStats = [];
+            for(var key in stats){
+                allStats.push({
+                    expression: key,
+                    time: stats[key].time,
+                    calls: stats[key].calls,
+                    averageTime: stats[key].averageTime
+                });
+            }
+
+            allStats.sort(function(stat1, stat2){
+                return stat1.time - stat2.time;
+            }).slice(-10).forEach(function(stat){
+                console.log([
+                    "Expression: ",
+                    stat.expression,
+                    '\n',
+                    'Average evaluation time: ',
+                    stat.averageTime,
+                    '\n',
+                    'Total time: ',
+                    stat.time,
+                    '\n',
+                    'Call count: ',                    stat.calls
+                ].join(''));
+            });
+        }
+
+        function addStat(stat){
+            var expStats = stats[stat.expression] = stats[stat.expression] || {time:0, calls:0};
+
+            expStats.time += stat.time;
+            expStats.calls++;
+            expStats.averageTime = expStats.time / expStats.calls;
+        }
             
         gel.Token = Token;
         gel.createNestingParser = createNestingParser;
@@ -855,15 +930,16 @@
         gel.tokenise = function(expression){
             return tokenise.call(this, expression, memoisedTokens);
         };
-        gel.evaluate = function(expression, scope, returnAsTokens){
+        gel.evaluate = function(expression, injectedScope, returnAsTokens){
             var gelInstance = this,
                 memoiseKey = expression,
                 expressionTree,
                 evaluatedTokens,
-                lastToken;
-                
-            scope.__proto__ = this.functions || {};
-                
+                lastToken,
+                scope = new Scope();
+
+            scope.add(this.functions).add(injectedScope);
+
             if(memoisedExpressions[memoiseKey]){
                 expressionTree = memoisedExpressions[memoiseKey].slice();
             } else{            
@@ -872,7 +948,12 @@
                 memoisedExpressions[memoiseKey] = expressionTree;
             }
             
+            var startTime = new Date();
             evaluatedTokens = evaluate(expressionTree , scope);
+            addStat({
+                expression: expression,
+                time: new Date() - startTime
+            });
             
             if(returnAsTokens){
                 return evaluatedTokens.slice();
