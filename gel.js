@@ -103,7 +103,7 @@
     }
     
     function callWith(fn, scope, fnArguments, calledToken){
-        var argIndex = 0;
+        var argIndex = 0,
             args = {
                 callee: calledToken,
                 length: fnArguments.length,
