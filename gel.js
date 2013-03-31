@@ -98,10 +98,6 @@
         };
     }
     
-    function evaluateValueType(){
-        this.result = this.original;
-    }
-    
     function callWith(fn, scope, fnArguments, calledToken){
         var argIndex = 0,
             args = {
@@ -170,7 +166,7 @@
 
             return new Token(
                    converter,
-                   expression.slice(1, index),
+                   expression.slice(0, index+1),
                    index + escapes + 1
             );
         }
@@ -241,6 +237,8 @@
                             && this.targetToken.result.hasOwnProperty(this.identifierToken.original)
                         ){
                             this.result = this.targetToken.result[this.identifierToken.original];
+                        }else{
+                            this.result = undefined;
                         }
                     }
                 }
@@ -265,14 +263,18 @@
                         return detectString(this, substring, '"', "double quoted");
                     },
                     parse:noop,
-                    evaluate:evaluateValueType
+                    evaluate:function(){
+                        this.result = this.original.slice(1, -1);
+                    }
                 },
                 "singleQuoteString": {
                     tokenise: function convertStringToken(substring) {
                         return detectString(this, substring, "'", "single quoted");
                     },
                     parse:noop,
-                    evaluate:evaluateValueType
+                    evaluate:function(){
+                        this.result = this.original.slice(1, -1);
+                    }
                 },            
                 "number": {
                     tokenise: function convertNumberToken(substring) {
@@ -870,7 +872,7 @@
     }
     
     function evaluate(tokens, scope){        
-        scope = scope || {};
+        scope = scope || new Scope();
         for(var i = 0; i < tokens.length; i++){
             var token = tokens[i];
             token.evaluate(scope);
@@ -899,7 +901,7 @@
             }
 
             allStats.sort(function(stat1, stat2){
-                return stat1.time - stat2.time;
+                return stat2.time - stat1.time;
             }).slice(-10).forEach(function(stat){
                 console.log([
                     "Expression: ",
