@@ -495,13 +495,20 @@
                 return result;
             },
             "map":function(scope, args){
-                var items = args.next(),
-                    result = [],
+                var source = args.next(),
+                    isArray = Array.isArray(source),
+                    result = isArray ? [] : {},
                     functionToken = args.next();
-                    
-                fastEach(items, function(item, index){
-                    result[index] = callWith(functionToken, scope, [item]);
-                });
+
+                if(isArray){
+                    fastEach(source, function(item, index){
+                        result[index] = callWith(functionToken, scope, [item]);
+                    });
+                }else{
+                    for(var key in source){
+                        result[key] = callWith(functionToken, scope, [source[key]]);
+                    };
+                }  
                 
                 return result;
             },
