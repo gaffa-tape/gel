@@ -22,7 +22,8 @@
             }
         };
     </script>
-    <script src="gel.js" type="text/javascript"></script>                
+    <script src="../lang/lang.js" type="text/javascript"></script>   
+    <script src="gel.js" type="text/javascript"></script>
     <script src="jquery.min.js"></script>
     
     <script>
@@ -568,6 +569,10 @@
                 "[[ERROR]]"
             ],
             [
+                "demoFunc}",
+                "[[ERROR]]"
+            ],
+            [
                 "demoFunc",
                 "function () { return 123456; }"
             ],
@@ -603,6 +608,14 @@
                 [7,7,7]
             ],
             [
+                "(pairs (object 'hello' 'world'))",
+                [['hello','world']]
+            ],
+            [
+                "(flatten (pairs (object 'hello' 'world')))",
+                ['hello','world']
+            ],
+            [
                 "(fold anOtherArray 0 +)",
                 6
             ],
@@ -631,16 +644,17 @@
         var gel = new window.Gel();
         
         // Add a custom gel function
-        gel.functions["demoFunc"] = function() {
+        gel.scope["demoFunc"] = function() {
             return 123456;
         };
         
-        gel.functions["throwError"] = function() {
+        gel.scope["throwError"] = function() {
             throw "error";
         };
         
         // Add a custom token converter
-        gel.tokenConverters.primitives["path"] = {
+        gel.tokenConverters.push({
+            precedence:5,
             tokenise:function(substring){
                 if (substring.charAt(0) === '[') {
                     var index = 1;
@@ -655,7 +669,7 @@
                         else if(substring.charAt(index) === ']'){                        
                             var original = substring.slice(0, index+1);
                             
-                            return new gel.Token(
+                            return new Lang.Token(
                                 this,
                                 original,
                                 original.length
@@ -665,11 +679,10 @@
                     } while (index < substring.length);
                 }
             },
-            parse: function(){},
             evaluate: function(){
                 this.result = gaffa.model.get(this.original, gaffa.model.get.context, true);
             }
-        }
+        });
         
         String.prototype.format = String.prototype.format || function () {
             var s = this,
@@ -719,7 +732,8 @@
 
         $(document).ready(function () {
             var numPassed = 0,              
-                numFailed = 0;
+                numFailed = 0,
+                startTime = new Date();
             
             for (var index = 0; index < tests.length; index++) {
                 var test = tests[index][0],
@@ -735,10 +749,8 @@
                 }
                 catch (ex) {
                     exceptionMsg = ex;
-                    console.warn("Scan function failed!" + ex , ex);
+                    console.warn("Scan function failed!" + exceptionMsg , ex.stack);
                 }
-                finally { }
-
                     
                 // special case for printed functions
                 if (typeof actual === "function"){
@@ -761,6 +773,8 @@
                     
                 passFail ? $("#initialtests .passedTests").append(trString) : $("#initialtests .failedTests").append(trString);
             }
+
+            console.log("runtime: " + (new Date() - startTime));
             
             if(numFailed){
                 $("#initialtests").before('<h1 class="fail">FAIL</h1>');
