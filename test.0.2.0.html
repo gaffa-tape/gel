@@ -22,8 +22,7 @@
             }
         };
     </script>
-    <script src="../lang/lang.js" type="text/javascript"></script>   
-    <script src="gel.js" type="text/javascript"></script>
+    <script src="gel.0.2.0.js" type="text/javascript"></script>                
     <script src="jquery.min.js"></script>
     
     <script>
@@ -569,10 +568,6 @@
                 "[[ERROR]]"
             ],
             [
-                "demoFunc}",
-                "[[ERROR]]"
-            ],
-            [
                 "demoFunc",
                 "function () { return 123456; }"
             ],
@@ -606,15 +601,7 @@
             [
                 "(map anArray {item (length (concat item 'world '))})",
                 [7,7,7]
-            ],
-            [
-                "(pairs (object 'hello' 'world'))",
-                [['hello','world']]
-            ],
-            [
-                "(flatten (pairs (object 'hello' 'world')))",
-                ['hello','world']
-            ],
+            ],  
             [
                 "(fold anOtherArray 0 +)",
                 6
@@ -644,17 +631,16 @@
         var gel = new window.Gel();
         
         // Add a custom gel function
-        gel.scope["demoFunc"] = function() {
+        gel.functions["demoFunc"] = function() {
             return 123456;
         };
         
-        gel.scope["throwError"] = function() {
+        gel.functions["throwError"] = function() {
             throw "error";
         };
         
         // Add a custom token converter
-        gel.tokenConverters.push({
-            precedence:5,
+        gel.tokenConverters.primitives["path"] = {
             tokenise:function(substring){
                 if (substring.charAt(0) === '[') {
                     var index = 1;
@@ -669,7 +655,7 @@
                         else if(substring.charAt(index) === ']'){                        
                             var original = substring.slice(0, index+1);
                             
-                            return new Lang.Token(
+                            return new gel.Token(
                                 this,
                                 original,
                                 original.length
@@ -679,10 +665,11 @@
                     } while (index < substring.length);
                 }
             },
+            parse: function(){},
             evaluate: function(){
                 this.result = gaffa.model.get(this.original, gaffa.model.get.context, true);
             }
-        });
+        }
         
         String.prototype.format = String.prototype.format || function () {
             var s = this,
@@ -749,7 +736,7 @@
                 }
                 catch (ex) {
                     exceptionMsg = ex;
-                    console.warn("Scan function failed!" + exceptionMsg , ex.stack);
+                    console.warn("Scan function failed!" + ex , ex);
                 }
                     
                 // special case for printed functions
