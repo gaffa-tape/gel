@@ -29,9 +29,6 @@
     "lang-js": ">=0.0.0"
   },
   "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [
     "gel",
     "gaffa",
@@ -39,6 +36,9 @@
   ],
   "devDependencies": {
     "tape": "~0.0.4"
+  },
+  "scripts":{
+    "test":"node ./test/test.js"
   },
   "testling": {
     "files": "test/*.js",

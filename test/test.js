@@ -1,5 +1,4 @@
 var test = require('tape');
-var Lang = require('lang-js');
 var Gel = require('../gel.js');
 
 
@@ -31,7 +30,7 @@ gel.tokenConverters.push({
                 else if(substring.charAt(index) === ']'){                        
                     var original = substring.slice(0, index+1);
                     
-                    return new Lang.Token(
+                    return new Gel.Token(
                         this,
                         original,
                         original.length
@@ -76,31 +75,33 @@ var gaffa =  {
     }
 };
 
-test('description', function (t) {
+
+
+test("1", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("1", context), 1);
 });
-test('description', function (t) {
+test("-2", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("-2", context), -2);
 });
-test('description', function (t) {
+test("2.4e9", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("2.4e9", context), 2400000000);
 });
-test('description', function (t) {
+test("1.0E-3", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("1.0E-3", context), 0.001);
 });
-test('description', function (t) {
+test("\"a\"", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("\"a\"", context), "a");
 });
-test('description', function (t) {
+test("'a'", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("'a'", context), "a");
 });
-test('description', function (t) {
+test("'\"a\"'", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("'\"a\"'", context), "\"a\"");
 });
@@ -110,279 +111,279 @@ test('description', function (t) {
 	gel.evaluate("'''")
   });
 });
-test('description', function (t) {
+test("'\\''", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("'\\''", context), "'");
 });
-test('description', function (t) {
+test("\"\\\"\\\"\"", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("\"\\\"\\\"\"", context), "\"\"");
 });
-test('description', function (t) {
+test("\"\\\"Hello\\\" \\\"World\\\"\"", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("\"\\\"Hello\\\" \\\"World\\\"\"", context), "\"Hello\" \"World\"");
 });
-test('description', function (t) {
+test("'\"Hello\" \"World\"'", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("'\"Hello\" \"World\"'", context), "\"Hello\" \"World\"");
 });
-test('description', function (t) {
+test("true", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("true", context), true);
 });
-test('description', function (t) {
+test("false", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("false", context), false);
 });
-test('description', function (t) {
+test("null", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("null", context), null);
 });
-test('description', function (t) {
+test("undefined", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("undefined", context), undefined);
 });
-test('description', function (t) {
+test("(|| trueStartingIdentifier 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(|| trueStartingIdentifier 2)", context), 2);
 });
-test('description', function (t) {
+test("(= 1 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= 1 1)", context), true);
 });
-test('description', function (t) {
+test("(= 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= 1 2)", context), false);
 });
-test('description', function (t) {
+test("(! false)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(! false)", context), true);
 });
-test('description', function (t) {
+test("(= true true)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= true true)", context), true);
 });
-test('description', function (t) {
+test("(= true (! false))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= true (! false))", context), true);
 });
-test('description', function (t) {
+test("(|| 2 0 3)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(|| 2 0 3)", context), 2);
 });
-test('description', function (t) {
+test("(|| 0 0 0)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(|| 0 0 0)", context), 0);
 });
-test('description', function (t) {
+test("(|| false 'If this test passes, lazy evaluation has been implemented' (throwError))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(|| false 'If this test passes, lazy evaluation has been implemented' (throwError))", context), 'If this test passes, lazy evaluation has been implemented');
 });
-test('description', function (t) {
+test("(| 2 0 3 false true)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(| 2 0 3 false true)", context), true);
 });
-test('description', function (t) {
+test("(| 2 0 3 false false)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(| 2 0 3 false false)", context), false);
 });
-test('description', function (t) {
+test("(&& 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(&& 1 2)", context), 2);
 });
-test('description', function (t) {
+test("(+ 0 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(+ 0 2)", context), 2);
 });
-test('description', function (t) {
+test("(+ 1 2 3 -4)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(+ 1 2 3 -4)", context), 3);
 });
-test('description', function (t) {
+test("(- 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(- 1 2)", context), -1);
 });
-test('description', function (t) {
+test("(- 1 2 8)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(- 1 2 8)", context), -1);
 });
-test('description', function (t) {
+test("(/ 4 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(/ 4 2)", context), 2);
 });
-test('description', function (t) {
+test("(/ 0 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(/ 0 2)", context), 0);
 });
-test('description', function (t) {
+test("(== (/ 2 0) Infinity)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== (/ 2 0) Infinity)", context), true);
 });
-test('description', function (t) {
+test("(== (/ -2 0) -Infinity)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== (/ -2 0) -Infinity)", context), true);
 });
- test('description', function (t) {
+ test("(== (/ 0 0) NaN)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== (/ 0 0) NaN)", context), false);
 });
-test('description', function (t) {
+test("(isNaN NaN)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN NaN)", context), true);
 });
-test('description', function (t) {
+test("(isNaN (/ 0 0))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN (/ 0 0))", context), true);
 });
-test('description', function (t) {
+test("(isNaN Infinity)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN Infinity)", context), false);
 });
-test('description', function (t) {
+test("(isNaN)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN)", context), true);
 });
-test('description', function (t) {
+test("(isNaN \"dog\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN \"dog\")", context), true);
 });
-test('description', function (t) {
+test("(isNaN \"13\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(isNaN \"13\")", context), false);
 });
-test('description', function (t) {
+test("(== (/ 64 8) (/ 4 3))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== (/ 64 8) (/ 4 3))", context), false);
 });
-test('description', function (t) {
+test("(= null undefined)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= null undefined)", context), true);
 });
-test('description', function (t) {
+test("(== null undefined)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== null undefined)", context), false);
 });
-test('description', function (t) {
+test("(== true (! false))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== true (! false))", context), true);
 });
-test('description', function (t) {
+test("(!= true false)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(!= true false)", context), true);
 });
-test('description', function (t) {
+test("(!== true (! false))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(!== true (! false))", context), false);
 });
-test('description', function (t) {
+test("(!= true 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(!= true 1)", context), false);
 });
-test('description', function (t) {
+test("(!== true 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(!== true 1)", context), true);
 });
-test('description', function (t) {
+test("(> 1 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(> 1 1)", context), false);
 });
-test('description', function (t) {
+test("(> 2 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(> 2 1)", context), true);
 });
-test('description', function (t) {
+test("(> 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(> 1 2)", context), false);
 });
-test('description', function (t) {
+test("(> 3 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(> 3 2)", context), true);
 });
-test('description', function (t) {
+test("(> 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(> 1 2)", context), false);
 });
-test('description', function (t) {
+test("(< 1 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(< 1 1)", context), false);
 });
-test('description', function (t) {
+test("(< 2 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(< 2 1)", context), false);
 });
-test('description', function (t) {
+test("(< 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(< 1 2)", context), true);
 });
-test('description', function (t) {
+test("(< 3 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(< 3 2)", context), false);
 });
-test('description', function (t) {
+test("(< 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(< 1 2)", context), true);
 });
-test('description', function (t) {
+test("(? true 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(? true 1 2)", context), 1);
 });
-test('description', function (t) {
+test("(? false 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(? false 1 2)", context), 2);
 });
-test('description', function (t) {
+test("(? '' 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(? '' 1 2)", context), 2);
 });
-test('description', function (t) {
+test("(? 'majigger' 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(? 'majigger' 1 2)", context), 1);
 });
-test('description', function (t) {
+test("(? true 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(? true 1)", context), 1);
 });
-test('description', function (t) {
+test("(>= 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(>= 1 2)", context), false);
 });
-test('description', function (t) {
+test("(>= 2 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(>= 2 2)", context), true);
 });
-test('description', function (t) {
+test("(>= 2 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(>= 2 1)", context), true);
 });
-test('description', function (t) {
+test("(>= 2 3)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(>= 2 3)", context), false);
 });
-test('description', function (t) {
+test("(>= 3 3)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(>= 3 3)", context), true);
 });
-test('description', function (t) {
+test("(<= 2 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(<= 2 1)", context), false);
 });
-test('description', function (t) {
+test("(<= 2 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(<= 2 2)", context), true);
 });
-test('description', function (t) {
+test("(<= 1 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(<= 1 2)", context), true);
 });
-test('description', function (t) {
+test("(<= 2 1)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(<= 2 1)", context), false);
 });
-test('description', function (t) {
+test("(<= 2 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(<= 2 2)", context), true);
 });
-test('description', function (t) {
+test("(array 1 2 3 \"abc\")", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(array 1 2 3 \"abc\")", context), [
         1,
@@ -391,115 +392,115 @@ test('description', function (t) {
         "abc"
     ]);
 });
-test('description', function (t) {
+test("(concat \"a\" \"b\" \"c\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(concat \"a\" \"b\" \"c\")", context), "abc");
 });
-test('description', function (t) {
+test("(slice 2 7 \"Hello World\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(slice 2 7 \"Hello World\")", context), "llo W");
 });
-test('description', function (t) {
+test("(slice 1 \"Hello World\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(slice 1 \"Hello World\")", context), "ello World");
 });
-test('description', function (t) {
+test("(slice \"Hello World\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(slice \"Hello World\")", context), "Hello World");
 });
-test('description', function (t) {
+test("(slice 1 2 (array 1 2 3))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(slice 1 2 (array 1 2 3))", context), [2]);
 });
-test('description', function (t) {
+test("(slice 1 (array 1 2 3))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(slice 1 (array 1 2 3))", context), [2, 3]);
 });
-test('description', function (t) {
+test("(slice (array 1 2 3))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(slice (array 1 2 3))", context), [1, 2, 3]);
 });
-test('description', function (t) {
+test("(format 'hello {0}' 'world')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(format 'hello {0}' 'world')", context), "hello world");
 });
-test('description', function (t) {
+test("(filter (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(filter (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", context), [{"prop":5},{"prop":5}]);
 });
-test('description', function (t) {
+test("(findOne (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(findOne (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", context), {"prop":5});
 });
-test('description', function (t) {
+test("(sort (array 7 2 3 5 6 4) {a b (- a b)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(sort (array 7 2 3 5 6 4) {a b (- a b)})", context), [2,3,4,5,6,7]);
 });
-test('description', function (t) {
+test("(sort (array (object 'prop' 6)(object 'prop' 7)(object 'prop' 5)) {a b (- a.prop b.prop)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(sort (array (object 'prop' 6)(object 'prop' 7)(object 'prop' 5)) {a b (- a.prop b.prop)})", context), [{"prop":5},{"prop":6},{"prop":7}]);
 });
-test('description', function (t) {
+test("(contains 'Hello World' 'WAT')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(contains 'Hello World' 'WAT')", context), false);
 });
-test('description', function (t) {
+test("(contains 'Hello World' 'hello')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(contains 'Hello World' 'hello')", context), true);
 });
-test('description', function (t) {
+test("(contains 'Hello World' 'Hello')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(contains 'Hello World' 'Hello')", context), true);
 });
-test('description', function (t) {
+test("(contains true 'Hello World' 'hello')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(contains true 'Hello World' 'hello')", context), false);
 });
-test('description', function (t) {
+test("(contains false 'Hello World' 'hello')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(contains false 'Hello World' 'hello')", context), true);
 });
-test('description', function (t) {
+test("(charAt 'things')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(charAt 'things')", context), 't');
 });
-test('description', function (t) {
+test("(charAt 'things' 4)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(charAt 'things' 4)", context), 'g');
 });
-test('description', function (t) {
+test("(last (array 1 2 3 \"abc\"))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(last (array 1 2 3 \"abc\"))", context), "abc");
 });
-test('description', function (t) {
+test("(last (filter [/somthing/empty] {item (= item 'foo')}))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(last (filter [/somthing/empty] {item (= item 'foo')}))", context), undefined);
 });
-test('description', function (t) {
+test("(object \"key\" \"value\")", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(object \"key\" \"value\")", context), {"key": "value"});
 });
-test('description', function (t) {
+test("(date)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(date)", context).toString(), new Date().toString());
 });
-test('description', function (t) {
+test("(date 123 123 123)", function (t) {
   t.plan(1);
-  t.equal(gel.evaluate("(date 123 123 123)", context) == null, true);
+  t.equal(gel.evaluate("(date 123 123 123)", context), null);
 });
-test('description', function (t) {
+test("(date 1355745289462)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(date 1355745289462)", context).toString(), "Mon Dec 17 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
 });
-test('description', function (t) {
+test("(date.addDays (date 1355745289462) 7)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(date.addDays (date 1355745289462) 7)", context).toString(), "Mon Dec 24 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
 });
-test('description', function (t) {
+test("(date.addDays (date 1355745289462) -7)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(date.addDays (date 1355745289462) -7)", context).toString(), "Mon Dec 10 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
 });
-test('description', function (t) {
+test("(max 1 5 3 4 2)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(max 1 5 3 4 2)", context), 5);
 });
@@ -509,7 +510,7 @@ test('description', function (t) {
 	gel.evaluate("()");
   }, "Unclosed single quoted string");
 });
-test('description', function (t) {
+test("[model/array]", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("[model/array]"),[
         1,
@@ -517,47 +518,47 @@ test('description', function (t) {
         3
     ]);
 });
-test('description', function (t) {
+test("(last [model/array])", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(last [model/array])", context), 3);
 });
-test('description', function (t) {
+test("(length [model/array])", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(length [model/array])", context), 3);
 });
-test('description', function (t) {
+test("(length \"string\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(length \"string\")", context), 6);
 });
-test('description', function (t) {
+test("(max [model/prop] 10)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(max [model/prop] 10)", context), 15);
 });
-test('description', function (t) {
+test("(toString 5)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(toString 5)", context), "5");
 });
-test('description', function (t) {
+test("(concat (toString [model/prop]) \" good sir\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(concat (toString [model/prop]) \" good sir\")", context), "15 good sir");
 });
-test('description', function (t) {
+test("(join \"\" [model/prop] \" good sir\")", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(join \"\" [model/prop] \" good sir\")", context), "15 good sir");
 });
-test('description', function (t) {
+test("(! (&& [model/prop] [model/prop2]))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(! (&& [model/prop] [model/prop2]))", context), false);
 });
-test('description', function (t) {
+test("(/ [model/prop] [model/prop2])", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(/ [model/prop] [model/prop2])", context), 1.5);
 });
-test('description', function (t) {
+test("(= 10 [model/prop2])", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= 10 [model/prop2])", context), true);
 });
-test('description', function (t) {
+test("(= (object) [model/empty])", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= (object) [model/empty])", context), false);
 });
@@ -567,51 +568,51 @@ test('description', function (t) {
 	gel.evaluate("(= [model/prop])")
   });
 });
-test('description', function (t) {
+test("(= (+ 10 15.5) (concat \"25\" \".5\"))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(= (+ 10 15.5) (concat \"25\" \".5\"))", context), true);
 });
-test('description', function (t) {
+test("(compare (array 1 2 3) (array 1 2 3) =)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(compare (array 1 2 3) (array 1 2 3) =)", context), true);
 });
-test('description', function (t) {
+test("(compare (array 1 5 3) (array 1 5 3) (array 1 5 3) (array 1 5 3) =)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(compare (array 1 5 3) (array 1 5 3) (array 1 5 3) (array 1 5 3) =)", context), true);
 });
-test('description', function (t) {
+test("(compare (array 4 5 6) (array 1 2 3) =)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(compare (array 4 5 6) (array 1 2 3) =)", context), false);
 });
-test('description', function (t) {
+test("(== (+ 10 15.5) (concat \"25\" \".5\"))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(== (+ 10 15.5) (concat \"25\" \".5\"))", context), false);
 });
-test('description', function (t) {
+test("(refine true (object 'stuff' 1 'things' 2 'majigger' 3) 'stuff' 'things')", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(refine true (object 'stuff' 1 'things' 2 'majigger' 3) 'stuff' 'things')", context), {majigger:3});
 });
-test('description', function (t) {
+test("(fromJSON '{\"hello\":[\"world\"]}')", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(fromJSON '{\"hello\":[\"world\"]}')", context), {"hello":["world"]});
 });
-test('description', function (t) {
+test("(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (< 1 (length(filter item {item (= item 2)})))})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (< 1 (length(filter item {item (= item 2)})))})", context), [[2,2,3]]);
 });
-test('description', function (t) {
+test("(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(filter (array (array 1 2 3)(array 1 4 3)(array 2 2 3)){item (= 1 (length(filter item {item (= item 2)})))})", context), [[1,2,3]]);
 });
-test('description', function (t) {
+test("(object 'thing' 5).thing", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(object 'thing' 5).thing", context), 5);
 });
-test('description', function (t) {
+test("(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )", context), [2,2]);
 });
-test('description', function (t) {
+test("(demoFunc)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(demoFunc)", context), 123456);
 });
@@ -633,12 +634,12 @@ test('description', function (t) {
     gel.evaluate("demoFunc}")
   }, "error");
 });
-test('description', function (t) {
+test("demoFunc", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("demoFunc", context).toString(), "function () {\r\n    return 123456;\r\n}");
 });
 
-test('description', function (t) {
+test("Zomfg wtf is this shit", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("Zomfg wtf is this shit", context), undefined);
 });
@@ -648,51 +649,51 @@ test('description', function (t) {
     gel.evaluate("\"not a well formed\" string\"")
   }, "error");
 });
-test('description', function (t) {
+test("(map anArray (partial concat 'world '))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(map anArray (partial concat 'world '))", context), ["world a","world b","world c"]);
 });
-test('description', function (t) {
+test("(map anArray {string (concat 'world ' string)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(map anArray {string (concat 'world ' string)})", context), ["world a","world b","world c"]);
 });
-test('description', function (t) {
+test("(map anArray (compose length (partial concat 'world ')))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(map anArray (compose length (partial concat 'world ')))", context), [7,7,7]);
 });
-test('description', function (t) {
+test("(map anArray {item (length (concat 'world ' item))})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(map anArray {item (length (concat 'world ' item))})", context), [7,7,7]);
 });
-test('description', function (t) {
+test("(map anArray {item (length (concat item 'world '))})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(map anArray {item (length (concat item 'world '))})", context), [7,7,7]);
 });
-test('description', function (t) {
+test("(pairs (object 'hello' 'world'))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(pairs (object 'hello' 'world'))", context), [['hello','world']]);
 });
-test('description', function (t) {
+test("(flatten (pairs (object 'hello' 'world')))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(flatten (pairs (object 'hello' 'world')))", context), ['hello','world']);
 });
-test('description', function (t) {
+test("(fold anOtherArray 0 +)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(fold anOtherArray 0 +)", context), 6);
 });
-test('description', function (t) {
+test("(compare (array 1 2 3) (array 2 3 4) <)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(compare (array 1 2 3) (array 2 3 4) <)", context), true);
 });
-test('description', function (t) {
+test("(compare (array 1 2 3) (array 2 3 4) >)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(compare (array 1 2 3) (array 2 3 4) >)", context), false);
 });
-test('description', function (t) {
+test("(getValue anArray '1')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(getValue anArray '1')", context), "b");
 });
-test('description', function (t) {
+test("(apply | anArray)", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(apply | anArray)", context), "c");
 });

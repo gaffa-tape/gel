@@ -739,6 +739,9 @@
         return gel;
     };
 
+    Gel.Token = Lang.Token;
+    Gel.Scope = Lang.Scope;
+
     return Gel;
     
 }));
