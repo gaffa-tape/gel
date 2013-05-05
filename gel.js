@@ -525,6 +525,9 @@
                 
                 return target.slice(start, end);
             },
+            "split":function(scope, args){
+                return args.next().split(args.hasNext() && args.next());
+            },
             "last":function(scope, args){
                 var array = args.next();
 

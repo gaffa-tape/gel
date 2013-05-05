@@ -420,6 +420,10 @@ test("(slice (array 1 2 3))", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(slice (array 1 2 3))", context), [1, 2, 3]);
 });
+test("(split 'hello world' ' ')", function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate("(split 'hello world' ' ')", context)[1], "world");
+});
 test("(format 'hello {0}' 'world')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(format 'hello {0}' 'world')", context), "hello world");
