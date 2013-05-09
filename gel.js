@@ -1,15 +1,14 @@
 (function (root, factory) {
     if (typeof exports === 'object') {
-        module.exports = factory();
+        module.exports = factory(require('lang-js'));
     } else if (typeof define === 'function' && define.amd) {
-        define(factory);
+        define(['lang'], factory);
     } else {
-        root.Gel = factory();
+        root.Gel = factory(root.Lang);
   }
-}(this, function () {
+}(this, function (Lang) {
 
-    var Lang = require('lang-js'),
-        createNestingParser = Lang.createNestingParser,
+    var createNestingParser = Lang.createNestingParser,
         detectString = Lang.detectString,
         Token = Lang.Token,
         Scope = Lang.Scope;
