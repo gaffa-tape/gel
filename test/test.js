@@ -644,7 +644,7 @@ test('description', function (t) {
 });
 test("demoFunc", function (t) {
   t.plan(1);
-  t.equal(gel.evaluate("demoFunc", context).toString(), "function () {\r\n    return 123456;\r\n}");
+  t.equal(gel.evaluate("demoFunc", context), gel.scope.demoFunc);
 });
 
 test("Zomfg wtf is this shit", function (t) {
