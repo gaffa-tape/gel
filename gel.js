@@ -24,7 +24,7 @@
         return string.replace(/{(\d+)}/g, function(match, number) { 
             return typeof values[number] != 'undefined'
               ? values[number]
-              : match
+              : ''
             ;
         });
     }
@@ -736,7 +736,7 @@
             return lang.evaluate(expression, scope, this.tokenConverters, returnAsTokens);
         };
         gel.tokenConverters = tokenConverters.slice();
-        gel.scope = {__proto__:scope};
+        gel.scope = Object.create(scope);
         
         return gel;
     };

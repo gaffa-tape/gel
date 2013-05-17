@@ -428,6 +428,10 @@ test("(format 'hello {0}' 'world')", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(format 'hello {0}' 'world')", context), "hello world");
 });
+test("(format 'hello {0}' undefined)", function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate("(format 'hello {0}' undefined)", context), "hello ");
+});
 test("(filter (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(filter (array (object 'prop' 5)(object 'prop' 6)(object 'prop' 5)(object 'prop' 'WAT')) {item (= item.prop 5)})", context), [{"prop":5},{"prop":5}]);
@@ -490,7 +494,7 @@ test("(date)", function (t) {
 });
 test("(date 123 123 123)", function (t) {
   t.plan(1);
-  t.equal(gel.evaluate("(date 123 123 123)", context), null);
+  t.equal(isNaN(gel.evaluate("(date 123 123 123)", context).getTime()), true);
 });
 test("(date 1355745289462)", function (t) {
   t.plan(1);
