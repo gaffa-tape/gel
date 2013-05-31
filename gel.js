@@ -22,7 +22,7 @@
     
     function stringFormat(string, values){    
         return string.replace(/{(\d+)}/g, function(match, number) { 
-            return typeof values[number] != 'undefined'
+            return values[number] != null
               ? values[number]
               : ''
             ;
@@ -499,7 +499,8 @@
                     if(result == null || !result.concat){
                         return undefined;
                     }
-                    result = result.concat(args.next());
+                    var next = args.next();
+                    Array.isArray(next) && (result = result.concat(next));
                 }
                 return result;
             },
