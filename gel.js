@@ -621,6 +621,15 @@
 
                 return target.toLowerCase();
             },
+            "toUpperCase":function(scope, args){
+                var target = args.next();
+
+                if(typeof target !== 'string'){
+                    return undefined;
+                }
+
+                return target.toUpperCase();
+            },
             "format": function format(scope, args) {
                 var args = args.all();
                 
