@@ -484,6 +484,14 @@ test("(last (filter [/somthing/empty] {item (= item 'foo')}))", function (t) {
   t.plan(1);
   t.equal(gel.evaluate("(last (filter [/somthing/empty] {item (= item 'foo')}))", context), undefined);
 });
+test("(first (array 1 2 3 \"abc\"))", function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate("(first (array 1 2 3 \"abc\"))", context), 1);
+});
+test("(first (filter [/somthing/empty] {item (= item 'foo')}))", function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate("(first (filter [/somthing/empty] {item (= item 'foo')}))", context), undefined);
+});
 test("(object \"key\" \"value\")", function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate("(object \"key\" \"value\")", context), {"key": "value"});
