@@ -303,9 +303,6 @@
             "<=":function(scope, args){
                 return args.next() <= args.next();
             },
-            "double":function(scope, args){
-                return args.next() * 2;
-            },
             "?":function(scope, args){
                 return args.next() ? args.next() : args.get(2);
             },
@@ -358,6 +355,35 @@
                 var result = {};
                 while(args.hasNext()){
                     result[args.next()] = args.next();
+                }
+                return result;
+            },
+            "keys":function(scope, args){
+                return Object.keys(args.next());
+            },
+            "values":function(scope, args){
+                var target = args.next(),
+                    result = [];
+                for(var key in target){
+                    result.push(target[key]);
+                }
+                return result;
+            },
+            "invert":function(scope, args){
+                var target = args.next(),
+                    result = {};
+                for(var key in target){
+                    result[target[key]] = key;
+                }
+                return result;
+            },
+            "extend":function(scope, args){
+                var result = {};
+                while(args.hasNext()){
+                    var nextObject = args.next();
+                    for(var key in nextObject){
+                        result[key] = nextObject[key];
+                    }
                 }
                 return result;
             },
