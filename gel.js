@@ -604,8 +604,9 @@
             "contains": function(scope, args){
                 var args = args.all(),
                     target = args.shift(),
-                    success = true,
-                    strict = false;
+                    success = false,
+                    strict = false,
+                    arg;
                     
                 if(target == null){
                     return;
@@ -615,22 +616,31 @@
                     strict = target;
                     target = args.shift();
                 }
-                
-                if(!strict && typeof target === "string"){
-                    target = target.toLowerCase();
+                    
+                arg = args.pop();
+
+                if(target == null || !target.indexOf){
+                    return;
                 }
-                    
-                fastEach(args, function(arg){
-                    
-                    if(!strict && typeof arg === "string"){
-                        arg = arg.toLowerCase();
+                                     
+                if(typeof arg === "string" && !strict){
+                    arg = arg.toLowerCase();
+
+                    if(Array.isArray(target)){
+                        fastEach(target, function(targetItem){
+                            if(typeof targetItem === 'string' && targetItem.toLowerCase() === arg.toLowerCase()){
+                                return success = true;
+                            }
+                        });
+                    }else{
+                        if(typeof target === 'string' && target.toLowerCase().indexOf(arg)>=0){
+                            return success = true;
+                        }
                     }
-                    if(target.indexOf(arg)<0){
-                        success = false;
-                        return true;
-                    }
-                });
-                return success;
+                    return success;
+                }else{
+                    return target.indexOf(arg)>=0;
+                }
             },
             "charAt":function(scope, args){
                 var target = args.next(),
