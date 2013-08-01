@@ -728,6 +728,10 @@
                 if(args.length > 1){
                     array = args;
                 }
+
+                if(!array || !array.length){
+                    return result;
+                }
                     
                 for(var i = 0; i < array.length; i++){
                     result = scope.callWith(fn, [result, array[i]]);
