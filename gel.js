@@ -71,11 +71,12 @@
                 name:"parentheses",
                 precedence: 0,
                 tokenise: function convertParenthesisToken(substring) {
-                    if(substring.charAt(0) === '(' || substring.charAt(0) === ')'){
+                    var firstChar = substring.charAt(0);
+                    if(firstChar === '(' || firstChar === ')'){
                         return new Token(this, substring.charAt(0), 1);
                     }
                 },
-                parse:createNestingParser(new RegExp('^\\($'),new RegExp('^\\)$')),
+                parse:createNestingParser(/^\($/,/^\)$/),
                 evaluate:function(scope){
                     scope = new Scope(scope);
                         
@@ -86,6 +87,10 @@
                     }
                     
                     functionToken.evaluate(scope);
+
+                    if(typeof functionToken.result !== 'function'){
+                        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+                    }
                         
                     this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
                 }

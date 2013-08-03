@@ -20,7 +20,11 @@ var Gel = require('./gel'),
 
 function run(event){
     if(event.which === 13 && event.shiftKey){
-        output.innerText = gel.evaluate(input.value, JSON.parse(context.value || '{}'));
+        try{
+            output.innerText = gel.evaluate(input.value, JSON.parse(context.value || '{}'));
+        }catch(error){
+            output.innerText = error;
+        }
         event.preventDefault();
     }
 }
