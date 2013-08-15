@@ -364,7 +364,8 @@
                 return result;
             },
             "keys":function(scope, args){
-                return Object.keys(args.next());
+                var object = args.next();
+                return typeof object === 'object' ? Object.keys(object) : undefined;
             },
             "values":function(scope, args){
                 var target = args.next(),
