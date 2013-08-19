@@ -1,6 +1,7 @@
 var test = require('tape'),
     Gel = require('../gel.js'),
-    gel = new Gel();
+    gel = new Gel(),
+    createSpec = require('spec-js');
 
 // Add a custom gel function
 gel.scope["demoFunc"] = function() {
@@ -11,37 +12,42 @@ gel.scope["throwError"] = function() {
     throw "error";
 };
 
-// Add a custom token converter
-gel.tokenConverters.push({
-    precedence:5,
-    tokenise:function(substring){
-        if (substring.charAt(0) === '[') {
-            var index = 1;
-                
-            do {
-                if (
-                    (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
-                    (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
-                ) {
-                    index++;
-                }
-                else if(substring.charAt(index) === ']'){                        
-                    var original = substring.slice(0, index+1);
-                    
-                    return new Gel.Token(
-                        this,
-                        original,
-                        original.length
-                    );
-                }
+function detectPathToken(substring){
+    if (substring.charAt(0) === '[') {
+        var index = 1;
+            
+        do {
+            if (
+                (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
+                (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
+            ) {
                 index++;
-            } while (index < substring.length);
-        }
-    },
-    evaluate: function(){
-        this.result = gaffa.model.get(this.original, gaffa.model.get.context, true);
+            }
+            else if(substring.charAt(index) === ']'){                        
+                var original = substring.slice(0, index+1);
+
+                return new PathToken(
+                    original,
+                    original.length
+                );
+            }
+            index++;
+        } while (index < substring.length);
     }
-});
+}
+
+
+function PathToken(){}
+PathToken = createSpec(PathToken, Gel.Token);
+PathToken.prototype.precedence = 4;
+PathToken.tokenise = detectPathToken;
+PathToken.prototype.evaluate = function(scope){
+    this.result = gaffa.model.get(this.original);
+};
+
+// Add a custom token converter
+gel.tokenConverters.push(PathToken);
+
 
 var context = {
     contextProp:10,

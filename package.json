@@ -16,7 +16,7 @@
   ],
   "name": "gel-js",
   "description": "'Gaffa expression language' is an extensible expression language that lets you safely input epxressions into an application",
-  "version": "0.3.12",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/gaffa-tape/gel.git"
@@ -26,7 +26,8 @@
     "node": ">=0.6"
   },
   "dependencies": {
-    "lang-js": ">=0.0.3"
+    "lang-js": "0.1.x",
+    "spec-js": "0.0.x"
   },
   "devDependencies": {
     "crel":">=0.0.0"
