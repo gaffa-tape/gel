@@ -11,7 +11,8 @@
     var createNestingParser = Lang.createNestingParser,
         detectString = Lang.detectString,
         Token = Lang.Token,
-        Scope = Lang.Scope;
+        Scope = Lang.Scope,
+        createSpec = require('spec-js');
 
     function fastEach(items, callback) {
         for (var i = 0; i < items.length; i++) {
@@ -57,211 +58,248 @@
         }
     }
 
-    function createKeywordTokeniser(keyword){
+    function createKeywordTokeniser(Constructor, keyword){
         return function(substring){
-            substring = tokeniseIdentifier(substring);
+            substring = isIdentifier(substring);
             if (substring === keyword) {
-                return new Token(this, substring, substring.length);
+                return new Constructor(substring, substring.length);
             }
         };
     }
 
-    var tokenConverters = [
+    function StringToken(){}
+    StringToken = createSpec(StringToken, Token);
+    StringToken.prototype.precedence = 2;
+    StringToken.prototype.stringTerminal = '"';
+    StringToken.prototype.name = 'double quoted string';
+    StringToken.tokenise = function (substring) {
+        if (substring.charAt(0) === this.prototype.stringTerminal) {
+            var index = 0,
+            escapes = 0;
+                   
+            while (substring.charAt(++index) !== this.prototype.stringTerminal)
             {
-                name:"parentheses",
-                precedence: 0,
-                tokenise: function convertParenthesisToken(substring) {
-                    var firstChar = substring.charAt(0);
-                    if(firstChar === '(' || firstChar === ')'){
-                        return new Token(this, substring.charAt(0), 1);
-                    }
-                },
-                parse:createNestingParser(/^\($/,/^\)$/),
-                evaluate:function(scope){
-                    scope = new Scope(scope);
-                        
-                    var functionToken = this.childTokens[0];
-
-                    if(!functionToken){
-                        throw "Invalid function call. No function was provided to execute.";
-                    }
-                    
-                    functionToken.evaluate(scope);
-
-                    if(typeof functionToken.result !== 'function'){
-                        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
-                    }
-                        
-                    this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
-                }
-            },
-            {
-                name:"function",
-                precedence: 0,
-                tokenise: function convertFunctionToken(substring) {
-                    if(substring.charAt(0) === '{' || substring.charAt(0) === '}'){
-                        return new Token(this, substring.charAt(0), 1);
-                    }
-                },
-                parse: createNestingParser(new RegExp('^\\{$'),new RegExp('^\\}$')),
-                evaluate:function(scope){
-                    var parameterNames = this.childTokens.slice(),
-                        fnBody = parameterNames.pop();
-                                            
-                    this.result = function(scope, args){
-                        scope = new Scope(scope);
-                            
-                        for(var i = 0; i < parameterNames.length; i++){
-                            scope.set(parameterNames[i].original, args.get(i));
-                        }
-                        
-                        fnBody.evaluate(scope);
-                        
-                        return fnBody.result;
-                    }
-                }
-            },            
-            {
-                name:"period",
-                precedence: 1,
-                tokenise: function convertPeriodToken(substring) {
-                    var periodConst = ".";
-                    if (substring.charAt(0) === periodConst) return new Token(this, ".", 1);
-                    return;
-                },
-                parse: function(tokens, position){
-                    this.targetToken = tokens.splice(position-1,1)[0];
-                    this.identifierToken = tokens.splice(position,1)[0];
-                },
-                evaluate:function(scope){
-                    this.targetToken.evaluate(scope);
-                    if(
-                        this.targetToken.result &&
-                        (typeof this.targetToken.result === 'object' || typeof this.targetToken.result === 'function')
-                        && this.targetToken.result.hasOwnProperty(this.identifierToken.original)
-                    ){
-                        this.result = this.targetToken.result[this.identifierToken.original];
-                    }else{
-                        this.result = undefined;
-                    }
-                }
-            },
-            {
-                name:"delimiter",
-                precedence: 0,
-                tokenise: function convertDelimiterToken(substring) {
-                    var i = 0;
-                    while (i < substring.length && substring.charAt(i).trim() === "" || substring.charAt(i) === ',') {
-                        i++;
-                    }
-            
-                    if (i) return new Token(this, substring.slice(0, i), i);
-                },
-                parse:function(tokens, position){
-                    tokens.splice(position, 1);
-                }
-            },
-            {
-                name:"string",
-                precedence: 2,
-                tokenise: function convertStringToken(substring) {
-                    return detectString(this, substring, '"', "double quoted");
-                },
-                evaluate:function(){
-                    this.result = this.original.slice(1, -1);
-                }
-            },
-            {
-                name:"singleQuoteString",
-                precedence: 2,
-                tokenise: function convertStringToken(substring) {
-                    return detectString(this, substring, "'", "single quoted");
-                },
-                evaluate:function(){
-                    this.result = this.original.slice(1, -1);
-                }
-            },
-            {
-                name:"number",
-                precedence: 1,
-                tokenise: function convertNumberToken(substring) {
-                    var specials = {
-                        "NaN": Number.NaN,
-                        "-NaN": Number.NaN,
-                        "Infinity": Infinity,
-                        "-Infinity": -Infinity
-                    };
-                    for (var key in specials) {
-                        if (substring.slice(0, key.length) === key) {
-                            return new Token(this, key, key.length);
-                        }
-                    }
-            
-                    var valids = "0123456789-.Eex",
-                        index = 0;
-                        
-                    while (valids.indexOf(substring.charAt(index)||null) >= 0 && ++index) {}
-            
-                    if (index > 0) {
-                        var result = substring.slice(0, index);
-                        if(isNaN(parseFloat(result))){
-                            return;
-                        }
-                        return new Token(this, result, index);
-                    }
-            
-                    return;
-                },
-                evaluate:function(){
-                    this.result = parseFloat(this.original);
-                }
-            },
-            {
-                name:"identifier",
-                precedence: 3,
-                tokenise: function(substring){
-                    var result = tokeniseIdentifier(substring);
-
-                    if(result != null){
-                        return new Token(this, result, result.length);
-                    }
-                },
-                evaluate:function(scope){
-                    this.result = scope.get(this.original);
-                }
-            },          
-            {
-                name:"true",
-                precedence: 2,
-                tokenise: createKeywordTokeniser("true"),
-                evaluate:function(){
-                    this.result = true;
-                }
-            },
-            {
-                name:"false",
-                precedence: 2,
-                tokenise: createKeywordTokeniser("false"),
-                evaluate:function(){
-                    this.result = false;
-                }
-            },
-            {
-                name:"null",
-                precedence: 2,
-                tokenise: createKeywordTokeniser("null"),
-                evaluate:function(){
-                    this.result = null;
-                }
-            },
-            {
-                name:"undefined",
-                precedence: 2,
-                tokenise: createKeywordTokeniser("undefined"),
-                evaluate:function(){
-                    this.result = undefined;
-                }
+               if(index >= substring.length){
+                       throw "Unclosed " + this.name;
+               }
+               if (substring.charAt(index) === '\\' && substring.charAt(index+1) === this.prototype.stringTerminal) {
+                       substring = substring.slice(0, index) + substring.slice(index + 1);
+                       escapes++;
+               }
             }
+
+            return new this(
+                substring.slice(0, index+1),
+                index + escapes + 1
+            );
+        }
+    }
+    StringToken.prototype.evaluate = function () {
+        this.result = this.original.slice(1,-1);
+    }
+
+    function String2Token(){}
+    String2Token = createSpec(String2Token, StringToken);
+    String2Token.prototype.stringTerminal = "'";
+    String2Token.prototype.name = 'single quoted string';
+    String2Token.tokenise = StringToken.tokenise;
+
+    function ParenthesesToken(){
+    }
+    ParenthesesToken = createSpec(ParenthesesToken, Token);
+    ParenthesesToken.prototype.name = 'parentheses';
+    ParenthesesToken.tokenise = function(substring) {
+        if(substring.charAt(0) === '(' || substring.charAt(0) === ')'){
+            return new ParenthesesToken(substring.charAt(0), 1);
+        }
+    }
+    ParenthesesToken.prototype.parse = createNestingParser(/^\($/,/^\)$/);
+    ParenthesesToken.prototype.evaluate = function(scope){
+        scope = new Scope(scope);
+            
+        var functionToken = this.childTokens[0];
+
+        if(!functionToken){
+            throw "Invalid function call. No function was provided to execute.";
+        }
+        
+        functionToken.evaluate(scope);
+
+        if(typeof functionToken.result !== 'function'){
+            throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+        }
+            
+        this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
+    };
+
+    function NumberToken(){}
+    NumberToken = createSpec(NumberToken, Token);
+    NumberToken.prototype.name = 'number';
+    NumberToken.tokenise = function(substring) {
+        var specials = {
+            "NaN": Number.NaN,
+            "-NaN": Number.NaN,
+            "Infinity": Infinity,
+            "-Infinity": -Infinity
+        };
+        for (var key in specials) {
+            if (substring.slice(0, key.length) === key) {
+                return new NumberToken(key, key.length);
+            }
+        }
+
+        var valids = "0123456789-.Eex",
+            index = 0;
+            
+        while (valids.indexOf(substring.charAt(index)||null) >= 0 && ++index) {}
+
+        if (index > 0) {
+            var result = substring.slice(0, index);
+            if(isNaN(parseFloat(result))){
+                return;
+            }
+            return new NumberToken(result, index);
+        }
+
+        return;
+    };
+    NumberToken.prototype.evaluate = function(scope){        
+        this.result = parseFloat(this.original);
+    };
+
+    function NullToken(){}
+    NullToken = createSpec(NullToken, Token);
+    NullToken.prototype.name = 'semicolon';
+    NullToken.prototype.precedence = 2;
+    NullToken.tokenise = createKeywordTokeniser(NullToken, "null");
+    NullToken.prototype.evaluate = function(scope){
+        this.result = null;
+    };
+
+    function UndefinedToken(){}
+    UndefinedToken = createSpec(UndefinedToken, Token);
+    UndefinedToken.prototype.name = 'undefined';
+    UndefinedToken.prototype.precedence = 2;
+    UndefinedToken.tokenise = createKeywordTokeniser(UndefinedToken, 'undefined');
+    UndefinedToken.prototype.evaluate = function(scope){
+        this.result = undefined;
+    };
+
+    function TrueToken(){}
+    TrueToken = createSpec(TrueToken, Token);
+    TrueToken.prototype.name = 'true';
+    TrueToken.prototype.precedence = 2;
+    TrueToken.tokenise = createKeywordTokeniser(TrueToken, 'true');
+    TrueToken.prototype.evaluate = function(scope){
+        this.result = true;
+    };
+
+    function FalseToken(){}
+    FalseToken = createSpec(FalseToken, Token);
+    FalseToken.prototype.name = 'false';
+    FalseToken.prototype.precedence = 2;
+    FalseToken.tokenise = createKeywordTokeniser(FalseToken, 'false');
+    FalseToken.prototype.evaluate = function(scope){
+        this.result = false;
+    };
+
+    function DelimiterToken(){}
+    DelimiterToken = createSpec(DelimiterToken, Token);
+    DelimiterToken.prototype.name = 'delimiter';
+    DelimiterToken.prototype.precedence = 2;
+    DelimiterToken.tokenise = function(substring) {
+        var i = 0;
+        while(i < substring.length && substring.charAt(i).trim() === "" || substring.charAt(i) === ',') {
+            i++;
+        }
+
+        if(i){
+            return new DelimiterToken(substring.slice(0, i), i);
+        }
+    };
+    DelimiterToken.prototype.parse = function(tokens, position){
+        tokens.splice(position, 1);
+    };
+
+    function IdentifierToken(){}
+    IdentifierToken = createSpec(IdentifierToken, Token);
+    IdentifierToken.prototype.name = 'identifier';
+    IdentifierToken.prototype.precedence = 3;
+    IdentifierToken.tokenise = function(substring){
+        var result = tokeniseIdentifier(substring);
+
+        if(result != null){
+            return new IdentifierToken(result, result.length);
+        }
+    };
+    IdentifierToken.prototype.evaluate = function(scope){
+        this.result = scope.get(this.original);
+    };
+
+    function PeriodToken(){}
+    PeriodToken = createSpec(PeriodToken, Token);
+    PeriodToken.prototype.name = 'period';
+    PeriodToken.prototype.precedence = 1;
+    PeriodToken.tokenise = function(substring){
+        var periodConst = ".";
+        return (substring.charAt(0) === periodConst) ? new PeriodToken(periodConst, 1) : undefined;
+    };
+    PeriodToken.prototype.parse = function(tokens, position){
+        this.targetToken = tokens.splice(position-1,1)[0];
+        this.identifierToken = tokens.splice(position,1)[0];
+    };
+    PeriodToken.prototype.evaluate = function(scope){
+        this.targetToken.evaluate(scope);
+        if(
+            this.targetToken.result &&
+            (typeof this.targetToken.result === 'object' || typeof this.targetToken.result === 'function')
+            && this.targetToken.result.hasOwnProperty(this.identifierToken.original)
+        ){
+            this.result = this.targetToken.result[this.identifierToken.original];
+        }else{
+            this.result = undefined;
+        }
+    };
+
+    function FunctionToken(){}
+    FunctionToken = createSpec(FunctionToken, Token);
+    FunctionToken.prototype.name = 'function';
+    FunctionToken.tokenise = function convertFunctionToken(substring) {
+        if(substring.charAt(0) === '{' || substring.charAt(0) === '}'){
+            return new FunctionToken(substring.charAt(0), 1);
+        }
+    };
+    FunctionToken.prototype.parse = createNestingParser(/^\{$/,/^\}$/);
+    FunctionToken.prototype.evaluate = function(scope){
+        var parameterNames = this.childTokens.slice(),
+            fnBody = parameterNames.pop();
+                                
+        this.result = function(scope, args){
+            scope = new Scope(scope);
+                
+            for(var i = 0; i < parameterNames.length; i++){
+                scope.set(parameterNames[i].original, args.get(i));
+            }
+            
+            fnBody.evaluate(scope);
+            
+            return fnBody.result;
+        }
+    };
+
+    var tokenConverters = [
+            StringToken,
+            String2Token,
+            ParenthesesToken,
+            NumberToken,
+            NullToken,
+            UndefinedToken,
+            TrueToken,
+            FalseToken,
+            DelimiterToken,
+            IdentifierToken,
+            PeriodToken,
+            FunctionToken
         ],
         scope = {
             "toString":function(scope, args){
