@@ -26,7 +26,7 @@
     "node": ">=0.6"
   },
   "dependencies": {
-    "lang-js": ">=0.0.3",
+    "lang-js": "0.1.x",
     "spec-js": "0.0.x"
   },
   "devDependencies": {
