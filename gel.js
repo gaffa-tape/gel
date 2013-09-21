@@ -12,8 +12,8 @@ function fastEach(items, callback) {
     return items;
 }
 
-function stringFormat(string, values){    
-    return string.replace(/{(\d+)}/g, function(match, number) { 
+function stringFormat(string, values){
+    return string.replace(/{(\d+)}/g, function(match, number) {
         return values[number] != null
           ? values[number]
           : ''
@@ -35,7 +35,7 @@ function tokeniseIdentifier(substring){
     //operators
     var operators = "!=<>/&|*%-^?+\\",
         index = 0;
-        
+
     while (operators.indexOf(substring.charAt(index)||null) >= 0 && ++index) {}
 
     if (index > 0) {
@@ -45,7 +45,7 @@ function tokeniseIdentifier(substring){
     var identifier = isIdentifier(substring);
 
     if(identifier != null){
-        return identifier;                        
+        return identifier;
     }
 }
 
@@ -67,7 +67,7 @@ StringToken.tokenise = function (substring) {
     if (substring.charAt(0) === this.prototype.stringTerminal) {
         var index = 0,
         escapes = 0;
-               
+
         while (substring.charAt(++index) !== this.prototype.stringTerminal)
         {
            if(index >= substring.length){
@@ -107,19 +107,19 @@ ParenthesesToken.tokenise = function(substring) {
 ParenthesesToken.prototype.parse = createNestingParser(/^\($/,/^\)$/);
 ParenthesesToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
-        
+
     var functionToken = this.childTokens[0];
 
     if(!functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
-    
+
     functionToken.evaluate(scope);
 
     if(typeof functionToken.result !== 'function'){
         throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
     }
-        
+
     this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
 };
 
@@ -141,7 +141,7 @@ NumberToken.tokenise = function(substring) {
 
     var valids = "0123456789-.Eex",
         index = 0;
-        
+
     while (valids.indexOf(substring.charAt(index)||null) >= 0 && ++index) {}
 
     if (index > 0) {
@@ -154,7 +154,7 @@ NumberToken.tokenise = function(substring) {
 
     return;
 };
-NumberToken.prototype.evaluate = function(scope){        
+NumberToken.prototype.evaluate = function(scope){
     this.result = parseFloat(this.original);
 };
 
@@ -264,16 +264,16 @@ FunctionToken.prototype.parse = createNestingParser(/^\{$/,/^\}$/);
 FunctionToken.prototype.evaluate = function(scope){
     var parameterNames = this.childTokens.slice(),
         fnBody = parameterNames.pop();
-                            
+
     this.result = function(scope, args){
         scope = new Scope(scope);
-            
+
         for(var i = 0; i < parameterNames.length; i++){
             scope.set(parameterNames[i].original, args.get(i));
         }
-        
+
         fnBody.evaluate(scope);
-        
+
         return fnBody.result;
     }
 };
@@ -443,8 +443,8 @@ var tokenConverters = [
                 for(var key in source){
                     result[key] = scope.callWith(functionToken, [source[key]]);
                 };
-            }  
-            
+            }
+
             return result;
         },
         "pairs": function(scope, args){
@@ -485,18 +485,18 @@ var tokenConverters = [
         "sort": function(scope, args) {
             var args = args.all(),
                 result;
-            
+
             var array = args[0];
             var functionToCompare = args[1];
-            
+
             if (Array.isArray(array)) {
-            
-                result = array.sort(function(a,b){
+
+                result = array.slice().sort(function(a,b){
                     return scope.callWith(functionToCompare, [a,b]);
                 });
 
                 return result;
-            
+
             }else {
                 return;
             }
@@ -504,54 +504,54 @@ var tokenConverters = [
         "filter": function(scope, args) {
             var args = args.all(),
                 filteredList = [];
-                
+
             if (args.length < 2) {
                 return args;
             }
-            
+
 
 
             var array = args[0],
                 functionToCompare = args[1];
-            
+
             if (Array.isArray(array)) {
-                
+
                 fastEach(array, function(item, index){
                     if(typeof functionToCompare === "function"){
-                        if(scope.callWith(functionToCompare, [item])){ 
+                        if(scope.callWith(functionToCompare, [item])){
                             filteredList.push(item);
                         }
                     }else{
-                        if(item === functionToCompare){ 
+                        if(item === functionToCompare){
                             filteredList.push(item);
                         }
                     }
                 });
-                return filteredList;                
+                return filteredList;
             }
         },
         "findOne": function(scope, args) {
             var args = args.all(),
                 result;
-                
+
             if (args.length < 2) {
                 return args;
             }
-            
+
 
 
             var array = args[0],
                 functionToCompare = args[1];
-            
+
             if (Array.isArray(array)) {
-                
+
                 fastEach(array, function(item, index){
-                    if(scope.callWith(functionToCompare, [item])){ 
+                    if(scope.callWith(functionToCompare, [item])){
                         result = item;
                         return true;
                     }
                 });
-                return result;              
+                return result;
             }
         },
         "concat":function(scope, args){
@@ -583,7 +583,7 @@ var tokenConverters = [
                 end = target;
                 target = args.next();
             }
-            
+
             return target.slice(start, end);
         },
         "split":function(scope, args){
@@ -624,7 +624,7 @@ var tokenConverters = [
                 reference = args.pop(),
                 result = true,
                 objectToCompare;
-                                
+
             while(args.length){
                 objectToCompare = args.pop();
                 for(var key in objectToCompare){
@@ -633,7 +633,7 @@ var tokenConverters = [
                     }
                 }
             }
-            
+
             return result;
         },
         "contains": function(scope, args){
@@ -642,22 +642,22 @@ var tokenConverters = [
                 success = false,
                 strict = false,
                 arg;
-                
+
             if(target == null){
                 return;
             }
-                
+
             if(typeof target === 'boolean'){
                 strict = target;
                 target = args.shift();
             }
-                
+
             arg = args.pop();
 
             if(target == null || !target.indexOf){
                 return;
             }
-                                 
+
             if(typeof arg === "string" && !strict){
                 arg = arg.toLowerCase();
 
@@ -711,7 +711,7 @@ var tokenConverters = [
         },
         "format": function format(scope, args) {
             var args = args.all();
-            
+
             return stringFormat(args.shift(), args);
         },
         "refine": function(scope, args){
@@ -719,7 +719,7 @@ var tokenConverters = [
                 exclude = typeof args[0] === "boolean" && args.shift(),
                 original = args.shift(),
                 refined = {};
-                
+
             for(var i = 0; i < args.length; i++){
                 args[i] = args[i].toString();
             }
@@ -731,20 +731,20 @@ var tokenConverters = [
                     refined[key] = original[key];
                 }
             }
-            
+
             return refined;
         },
         "date": (function(){
             var date = function(scope, args) {
                 return args.length ? new Date(args.length > 1 ? args.all() : args.next()) : new Date();
             };
-            
+
             date.addDays = function(scope, args){
                 var baseDate = args.next();
 
                 return new Date(baseDate.setDate(baseDate.getDate() + args.next()));
             }
-            
+
             return date;
         })(),
         "toJSON":function(scope, args){
@@ -759,7 +759,7 @@ var tokenConverters = [
                 seed = args.pop(),
                 array = args[0],
                 result = seed;
-            
+
             if(args.length > 1){
                 array = args;
             }
@@ -767,17 +767,17 @@ var tokenConverters = [
             if(!array || !array.length){
                 return result;
             }
-                
+
             for(var i = 0; i < array.length; i++){
                 result = scope.callWith(fn, [result, array[i]]);
             }
-            
+
             return result;
         },
         "partial": function(scope, args){
             var outerArgs = args.all(),
                 fn = outerArgs.shift();
-            
+
             return function(scope, args){
                 var innerArgs = args.all();
                 return scope.callWith(fn, outerArgs.concat(innerArgs));
@@ -786,37 +786,37 @@ var tokenConverters = [
         "flip": function(scope, args){
             var outerArgs = args.all().reverse(),
                 fn = outerArgs.pop();
-            
+
             return function(scope, args){
                 return scope.callWith(fn, outerArgs)
             };
         },
         "compose": function(scope, args){
             var outerArgs = args.all().reverse();
-                
+
             return function(scope, args){
                 var result = scope.callWith(outerArgs[0], args.all());
-                
+
                 for(var i = 1; i < outerArgs.length; i++){
                     result = scope.callWith(outerArgs[i], [result]);
                 }
-                
+
                 return result;
             };
         },
         "apply": function(scope, args){
             var fn = args.next()
                 outerArgs = args.next();
-                
+
             return scope.callWith(fn, outerArgs);
         }
     };
 
 
-Gel = function(){    
+Gel = function(){
     var gel = {},
         lang = new Lang();
-        
+
     gel.lang = lang;
     gel.tokenise = function(expression){
         return gel.lang.tokenise(expression, this.tokenConverters);
@@ -830,7 +830,7 @@ Gel = function(){
     };
     gel.tokenConverters = tokenConverters.slice();
     gel.scope = Object.create(scope);
-    
+
     return gel;
 };
 
