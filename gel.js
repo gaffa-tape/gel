@@ -416,9 +416,9 @@ function ksort(array, sourceSubPaths, scope, sortFunction){
 
 function addFilterResult(filteredItems, item, key, sourcePathInfo, isArray){
     if(isArray){
-        filteredList.push(item);
+        filteredItems.push(item);
     }else{
-        filteredList[key] = item;
+        filteredItems[key] = item;
     }
     sourcePathInfo.pushSubPath(key);
 }
