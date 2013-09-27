@@ -414,7 +414,7 @@ function ksort(array, sourceSubPaths, scope, sortFunction){
     };
 }
 
-function addFilterResult(item, key, sourcePathInfo, isArray){
+function addFilterResult(filteredItems, item, key, sourcePathInfo, isArray){
     if(isArray){
         filteredList.push(item);
     }else{
@@ -426,11 +426,11 @@ function addFilterResult(item, key, sourcePathInfo, isArray){
 function gelFilter(scope, args) {
     var source = args.get(0),
         sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
-        filteredList = source && typeof source === 'object' && new source.constructor();
+        filteredItems = source && typeof source === 'object' && new source.constructor();
 
     var functionToCompare = args.get(1);
 
-    if(!filteredList){
+    if(!filteredItems){
         return undefined;
     }
 
@@ -444,18 +444,18 @@ function gelFilter(scope, args) {
         item = source[key];
         if(typeof functionToCompare === "function"){
             if(scope.callWith(functionToCompare, [item])){
-                addFilterResult(item, key, sourcePathInfo, isArray);
+                addFilterResult(filteredItems, item, key, sourcePathInfo, isArray);
             }
         }else{
             if(item === functionToCompare){
-                addFilterResult(item, key, sourcePathInfo, isArray);
+                addFilterResult(filteredItems, item, key, sourcePathInfo, isArray);
             }
         }
     }
 
     args.callee.sourcePathInfo = sourcePathInfo;
 
-    return filteredList;
+    return filteredItems;
 }
 
 var tokenConverters = [
