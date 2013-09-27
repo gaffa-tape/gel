@@ -3,6 +3,8 @@ var test = require('tape'),
     gel = new Gel(),
     createSpec = require('spec-js');
 
+
+
 // Add a custom gel function
 gel.scope["demoFunc"] = function() {
     return 123456;
@@ -11,42 +13,6 @@ gel.scope["demoFunc"] = function() {
 gel.scope["throwError"] = function() {
     throw "error";
 };
-
-function detectPathToken(substring){
-    if (substring.charAt(0) === '[') {
-        var index = 1;
-            
-        do {
-            if (
-                (substring.charAt(index) === '\\' && substring.charAt(index + 1) === '\\') || // escaped escapes
-                (substring.charAt(index) === '\\' && (substring.charAt(index + 1) === '[' || substring.charAt(index + 1) === ']')) //escaped braces
-            ) {
-                index++;
-            }
-            else if(substring.charAt(index) === ']'){                        
-                var original = substring.slice(0, index+1);
-
-                return new PathToken(
-                    original,
-                    original.length
-                );
-            }
-            index++;
-        } while (index < substring.length);
-    }
-}
-
-
-function PathToken(){}
-PathToken = createSpec(PathToken, Gel.Token);
-PathToken.prototype.precedence = 4;
-PathToken.tokenise = detectPathToken;
-PathToken.prototype.evaluate = function(scope){
-    this.result = gaffa.model.get(this.original);
-};
-
-// Add a custom token converter
-gel.tokenConverters.push(PathToken);
 
 
 var context = {
@@ -60,25 +26,6 @@ var context = {
     anArray: ["a","b","c"],
     anOtherArray: [1,2,3]
 }
-
-var gaffa =  {
-    model : {
-        array : [1, 2, 3],
-        prop : 15,
-        prop2 : 10,
-        empty: {},
-        get: function (path) {
-            // slice off []
-            path = path.slice(1,-1);
-            var index = path.indexOf("model/");
-            if (index >= 0) {
-                path = path.substring(index + 6);
-            }
-            return this[path];
-        }
-    }
-};
-
 
 
 test('1', function (t) {
@@ -588,19 +535,9 @@ test('(last (array 1 2 3 "abc"))', function (t) {
   t.equal(gel.evaluate(t.name, context), "abc");
   t.end();
 });
-test('(last (filter [/somthing/empty] {item (= item "foo")}))', function (t) {
-  t.plan(1);
-  t.equal(gel.evaluate(t.name, context), undefined);
-  t.end();
-});
 test('(first (array 1 2 3 "abc"))', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 1);
-  t.end();
-});
-test('(first (filter [/somthing/empty] {item (= item "foo")}))', function (t) {
-  t.plan(1);
-  t.equal(gel.evaluate(t.name, context), undefined);
   t.end();
 });
 test('(object "key" "value")', function (t) {
@@ -645,21 +582,12 @@ test('()', function (t) {
   }, "undefined is not a function");
   t.end();
 });
-test('[model/array]', function (t) {
-  t.plan(1);
-  t.deepEqual(gel.evaluate('[model/array]'),[
-        1,
-        2,
-        3
-    ]);
-  t.end();
-});
-test('(last [model/array])', function (t) {
+test('(last (array 1 2 3))', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 3);
   t.end();
 });
-test('(length [model/array])', function (t) {
+test('(length (array 1 2 3))', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 3);
   t.end();
@@ -669,46 +597,29 @@ test('(length "string")', function (t) {
   t.equal(gel.evaluate(t.name, context), 6);
   t.end();
 });
-test('(max [model/prop] 10)', function (t) {
-  t.plan(1);
-  t.equal(gel.evaluate(t.name, context), 15);
-  t.end();
-});
 test('(toString 5)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), "5");
   t.end();
 });
-test('(join "" [model/prop] " good sir")', function (t) {
+test('(join "" 15 " good sir")', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), "15 good sir");
   t.end();
 });
-test('(! (&& [model/prop] [model/prop2]))', function (t) {
-  t.plan(1);
-  t.equal(gel.evaluate(t.name, context), false);
-  t.end();
-});
-test('(/ [model/prop] [model/prop2])', function (t) {
+test('(/ 15 10)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 1.5);
   t.end();
 });
-test('(= 10 [model/prop2])', function (t) {
+test('(= 10 10)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), true);
   t.end();
 });
-test('(= (object) [model/empty])', function (t) {
+test('(= (object) null)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), false);
-  t.end();
-});
-test('description', function (t) {
-  t.plan(1);
-  t.throws(function(){
-	gel.evaluate("(= [model/prop])");
-  });
   t.end();
 });
 test('(= (+ 10 15.5) (join "" "25" ".5"))', function (t) {

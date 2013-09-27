@@ -632,13 +632,17 @@ var tokenConverters = [
                 fastEach(source, function(item, index){
                     var callee = {};
                     result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
-                    sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
+                    }
                 });
             }else{
                 for(var key in source){
                     var callee = {};
                     result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
-                    sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
+                    }
                 };
             }
 
