@@ -414,6 +414,50 @@ function ksort(array, sourceSubPaths, scope, sortFunction){
     };
 }
 
+function addFilterResult(item, key, sourcePathInfo, isArray){
+    if(isArray){
+        filteredList.push(item);
+    }else{
+        filteredList[key] = item;
+    }
+    sourcePathInfo.pushSubPath(key);
+}
+
+function gelFilter(scope, args) {
+    var source = args.get(0),
+        sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
+        filteredList = source && typeof source === 'object' && new source.constructor();
+
+    var functionToCompare = args.get(1);
+
+    if(!filteredList){
+        return undefined;
+    }
+
+    var isArray = Array.isArray(source),
+        item;
+
+    for(var key in source){
+        if(isArray && isNaN(key)){
+            continue;
+        }
+        item = source[key];
+        if(typeof functionToCompare === "function"){
+            if(scope.callWith(functionToCompare, [item])){
+                addFilterResult(item, key, sourcePathInfo, isArray);
+            }
+        }else{
+            if(item === functionToCompare){
+                addFilterResult(item, key, sourcePathInfo, isArray);
+            }
+        }
+    }
+
+    args.callee.sourcePathInfo = sourcePathInfo;
+
+    return filteredList;
+}
+
 var tokenConverters = [
         StringToken,
         String2Token,
@@ -660,42 +704,7 @@ var tokenConverters = [
 
             return result.values;
         },
-        "filter": function(scope, args) {
-            var source = args.get(0),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
-                filteredList = source && typeof source === 'object' && new source.constructor();
-
-            var functionToCompare = args.get(1);
-
-            if(!filteredList){
-                return undefined;
-            }
-
-            var isArray = Array.isArray(source),
-                item;
-
-            for(var key in source){
-                if(isArray && isNaN(key)){
-                    continue;
-                }
-                item = source[key];
-                if(typeof functionToCompare === "function"){
-                    if(scope.callWith(functionToCompare, [item])){
-                        filteredList.push(item);
-                        sourcePathInfo.pushSubPath(key);
-                    }
-                }else{
-                    if(item === functionToCompare){
-                        filteredList.push(item);
-                        sourcePathInfo.pushSubPath(key);
-                    }
-                }
-            }
-
-            args.callee.sourcePathInfo = sourcePathInfo;
-
-            return filteredList;
-        },
+        "filter": gelFilter,
         "findOne": function(scope, args) {
             var source = args.next(),
                 functionToCompare = args.next(),
