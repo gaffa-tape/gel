@@ -337,7 +337,7 @@ SourcePathInfo.prototype.setSubPath = function(to, key){
     if(!this.subPaths){
         return;
     }
-    this.subPaths[to] = this.innerPathInfo && this.innerPathInfo.subPaths && this.innerPathInfo.subPaths[to] || paths.append(this.path, paths.create(key));
+    this.subPaths[to] = this.innerPathInfo && this.innerPathInfo.subPaths && this.innerPathInfo.subPaths[key] || paths.append(this.path, paths.create(key));
 };
 SourcePathInfo.prototype.pushSubPath = function(key){
     if(!this.subPaths){
@@ -945,6 +945,10 @@ var tokenConverters = [
         },
         "format": function format(scope, args) {
             var args = args.all();
+
+            if(!args[0]){
+                return;
+            }
 
             return stringFormat(args.shift(), args);
         },
