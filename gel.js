@@ -806,7 +806,8 @@ var tokenConverters = [
             return result;
         },
         "split":function(scope, args){
-            return args.next().split(args.hasNext() && args.next());
+            var target = args.next();
+            return target ? target.split(args.hasNext() && args.next()) : undefined;
         },
         "last":function(scope, args){
             var source = args.next(),
