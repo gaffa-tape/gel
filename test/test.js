@@ -781,3 +781,19 @@ test('(apply | anArray)', function (t) {
   t.equal(gel.evaluate(t.name, context), "c");
   t.end();
 });
+test('(zip (array 1 2 3) (array "a" "b" "c"))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context), 
+        [1,'a',2,'b',3,'c']
+    );
+    t.end();
+});
+test('(zip (array 1 2 3) (array "a" "b" "c")(array "foo" "bar" "meh"))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context), 
+        [1,'a', 'foo',2,'b','bar',3,'c','meh']
+    );
+    t.end();
+});

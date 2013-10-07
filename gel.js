@@ -1048,6 +1048,30 @@ var tokenConverters = [
                 outerArgs = args.next();
 
             return scope.callWith(fn, outerArgs);
+        },
+        "zip": function(scope, args){
+            var allArgs = args.all(),
+                result = [],
+                maxLength = 0;
+
+            for(var i = 0; i < allArgs.length; i++){
+                if(!Array.isArray(allArgs[i])){
+                    allArgs.splice(i,1);
+                    i--;
+                    continue;
+                }
+                maxLength = Math.max(maxLength, allArgs[i].length);
+            }
+
+            for (var itemIndex = 0; itemIndex < maxLength; itemIndex++) {
+                for(var i = 0; i < allArgs.length; i++){
+                    if(allArgs[i].length >= itemIndex){
+                        result.push(allArgs[i][itemIndex]);
+                    }
+                }
+            }            
+
+            return result;
         }
     };
 
