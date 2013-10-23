@@ -644,7 +644,7 @@ var tokenConverters = [
             }
 
             // no subpaths, just do a normal sort.
-            if(!sourcePathInfo.subPaths.length){
+            if(!sourcePathInfo.path){
                 return source.slice().sort(function(value1, value2){
                     return scope.callWith(sortFunction, [value1,value2], this);
                 });
