@@ -485,6 +485,14 @@ test('(sort (array (object "prop" 6)(object "prop" 7)(object "prop" 5)) {a b (- 
   t.deepEqual(gel.evaluate(t.name, context), [{"prop":5},{"prop":6},{"prop":7}]);
   t.end();
 });
+test('(sort (array 1 5 33 59 3.7 3.6 3.8 29 43 19 4 9 42 29239 94 94 92 9 929 49 82 893 3 3 239 2742 22 947 427 2 947 792 7924 2 929 474 729 32 59 273 397 72 3) {a b (- a b)})', function (t) {
+  t.plan(1);
+  t.deepEqual(
+    gel.evaluate(t.name, context),
+    [1,2,2,3,3,3,3.6,3.7,3.8,4,5,9,9,19,22,29,32,33,42,43,49,59,59,72,82,92,94,94,239,273,397,427,474,729,792,893,929, 929,947,947,2742,7924,29239]
+  );
+  t.end();
+});
 test('(contains "Hello World" "WAT")', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), false);
@@ -784,7 +792,7 @@ test('(apply | anArray)', function (t) {
 test('(zip (array 1 2 3) (array "a" "b" "c"))', function (t) {
     t.plan(1);
     t.deepEqual(
-        gel.evaluate(t.name, context), 
+        gel.evaluate(t.name, context),
         [1,'a',2,'b',3,'c']
     );
     t.end();
@@ -792,7 +800,7 @@ test('(zip (array 1 2 3) (array "a" "b" "c"))', function (t) {
 test('(zip (array 1 2 3) (array "a" "b" "c")(array "foo" "bar" "meh"))', function (t) {
     t.plan(1);
     t.deepEqual(
-        gel.evaluate(t.name, context), 
+        gel.evaluate(t.name, context),
         [1,'a', 'foo',2,'b','bar',3,'c','meh']
     );
     t.end();

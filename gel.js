@@ -130,7 +130,7 @@ NumberToken.prototype.name = 'NumberToken';
 NumberToken.tokenise = function(substring) {
     var specials = {
         "NaN": Number.NaN,
-        "-NaN": Number.NaN,
+        "-NaN": -Number.NaN,
         "Infinity": Infinity,
         "-Infinity": -Infinity
     };
@@ -359,60 +359,6 @@ SourcePathInfo.prototype.drillTo = function(key){
         this.path = paths.append(this.path, paths.create(key));
     }
 };
-
-function ksort(array, sourceSubPaths, scope, sortFunction){
-
-    if(array.length < 2){
-        return {
-            values: array,
-            paths: sourceSubPaths
-        };
-    }
-
-    var source = array.slice(),
-        left = [],
-        pivot = source.splice(source.length/2,1).pop(),
-        pivotPath = sourceSubPaths.splice(sourceSubPaths.length/2,1).pop(),
-        right = [],
-        result,
-        resultPaths;
-
-    var leftPaths = [];
-    var rightPaths = [];
-
-    for(var i = 0; i < source.length; i++){
-        var item = source[i];
-        if(scope.callWith(sortFunction, [item, pivot]) > 0){
-            right.push(item);
-            rightPaths.push(sourceSubPaths[i]);
-        }else{
-            left.push(item);
-            leftPaths.push(sourceSubPaths[i]);
-        }
-    }
-
-    var leftResult = ksort(left, leftPaths, scope, sortFunction);
-
-    left = leftResult.values;
-    leftPaths = leftResult.paths;
-
-    left.push(pivot);
-    leftPaths.push(pivotPath);
-
-    var rightResult = ksort(right, rightPaths, scope, sortFunction);
-
-    right = rightResult.values;
-    rightPaths = rightResult.paths;
-
-    resultPaths = leftPaths.concat(rightPaths);
-
-    result = left.concat(right);
-
-    return {
-        values: result,
-        paths: resultPaths
-    };
-}
 
 function addFilterResult(filteredItems, item, key, sourcePathInfo, isArray){
     if(isArray){
@@ -697,16 +643,35 @@ var tokenConverters = [
                 return;
             }
 
+            // no subpaths, just do a normal sort.
+            if(!sourcePathInfo.subPaths.length){
+                return source.slice().sort(function(value1, value2){
+                    return scope.callWith(sortFunction, [value1,value2], this);
+                });
+            }
+
             for(var i = 0; i < source.length; i++){
                 sourcePathInfo.setSubPath(i, i);
             }
 
-            result = ksort(source, sourcePathInfo.subPaths, scope, sortFunction);
-            sourcePathInfo.setSubPaths(result.paths);
+            result = [];
+            sortedPaths = sourcePathInfo.subPaths.slice();
+            sortedPaths.sort(function(path1, path2){
+                var value1 = source[paths.toParts(path1).pop()],
+                    value2 = source[paths.toParts(path2).pop()];
+
+                return scope.callWith(sortFunction, [value1,value2], this);
+            });
+
+            for(var i = 0; i < sortedPaths.length; i++) {
+                result[paths.toParts(sortedPaths[i]).pop()] = source[i];
+            }
+
+            sourcePathInfo.setSubPaths(sortedPaths);
 
             args.callee.sourcePathInfo = sourcePathInfo;
 
-            return result.values;
+            return result;
         },
         "filter": gelFilter,
         "findOne": function(scope, args) {
@@ -1069,7 +1034,7 @@ var tokenConverters = [
                         result.push(allArgs[i][itemIndex]);
                     }
                 }
-            }            
+            }
 
             return result;
         }
