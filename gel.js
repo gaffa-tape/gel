@@ -657,8 +657,8 @@ var tokenConverters = [
             result = [];
             sortedPaths = sourcePathInfo.subPaths.slice();
             sortedPaths.sort(function(path1, path2){
-                var value1 = source[paths.toParts(path1).pop()],
-                    value2 = source[paths.toParts(path2).pop()];
+                var value1 = source[sourcePathInfo.subPaths.indexOf(path1)],
+                    value2 = source[sourcePathInfo.subPaths.indexOf(path2)];
 
                 return scope.callWith(sortFunction, [value1,value2], this);
             });
