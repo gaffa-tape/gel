@@ -13,6 +13,12 @@ function fastEach(items, callback) {
     return items;
 }
 
+function quickIndexOf(array, value){
+    var length = array.length
+    for(var i = 0; i < length && array[i] !== value;i++) {}
+    return i < length ? i : -1;
+}
+
 function stringFormat(string, values){
     return string.replace(/{(\d+)}/g, function(match, number) {
         return values[number] != null
@@ -236,8 +242,13 @@ IdentifierToken.tokenise = function(substring){
     }
 };
 IdentifierToken.prototype.evaluate = function(scope){
-    this.result = scope.get(this.original);
-    this.sourcePathInfo = scope.get('__sourcePathInfoFor__' + this.original);
+    var value = scope.get(this.original);
+    if(value instanceof Token){
+        this.result = value.result;
+        this.sourcePathInfo = value.sourcePathInfo;
+    }else{
+        this.result = value;
+    }
 };
 
 function PeriodToken(){}
@@ -291,14 +302,11 @@ FunctionToken.prototype.evaluate = function(scope){
         fnBody = parameterNames.pop();
 
     this.result = function(scope, args){
-        scope = new scope.constructor(scope);
+        scope = new Scope(scope);
 
         for(var i = 0; i < parameterNames.length; i++){
-            var parameterToken = args.getRaw(i);
-            scope.set(parameterNames[i].original, args.get(i));
-            if(parameterToken instanceof Token && parameterToken.sourcePathInfo){
-                scope.set('__sourcePathInfoFor__' + parameterNames[i].original, parameterToken.sourcePathInfo);
-            }
+            var parameterToken = args.getRaw(i, true);
+            scope.set(parameterNames[i].original, parameterToken);
         }
 
         fnBody.evaluate(scope);
@@ -673,8 +681,8 @@ var tokenConverters = [
             result = [];
             sortedPaths = sourcePathInfo.subPaths.slice();
             sortedPaths.sort(function(path1, path2){
-                var value1 = source[sourcePathInfo.subPaths.indexOf(path1)],
-                    value2 = source[sourcePathInfo.subPaths.indexOf(path2)];
+                var value1 = source[quickIndexOf(sourcePathInfo.subPaths, path1)],
+                    value2 = source[quickIndexOf(sourcePathInfo.subPaths, path2)];
 
                 return scope.callWith(sortFunction, [value1,value2], caller);
             });
