@@ -321,7 +321,7 @@ function SourcePathInfo(token, source, trackSubPaths){
     if(token){
         innerPathInfo = token.sourcePathInfo;
 
-        if(token instanceof Token && token.name === 'PathToken'){
+        if(token instanceof Token && token.path){
             originPath = token.original;
             this.original = source;
         }
@@ -494,23 +494,37 @@ var tokenConverters = [
             return args.next() !== args.next();
         },
         "||":function(scope, args){
-            var nextArg;
+            var nextArg,
+                rawResult,
+                argIndex = -1;
+
             while(args.hasNext()){
+                argIndex++;
                 nextArg = args.next();
                 if(nextArg){
-                    return nextArg;
+                    break;
                 }
             }
+
+            rawResult = args.getRaw(argIndex);
+            args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
         "|":function(scope, args){
-            var nextArg;
+            var nextArg,
+                rawResult,
+                argIndex = -1;
+
             while(args.hasNext()){
+                argIndex++;
                 nextArg = args.next();
-                if(nextArg === true ){
-                    return nextArg;
+                if(nextArg === true){
+                    break;
                 }
             }
+
+            rawResult = args.getRaw(argIndex);
+            args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
         "&&":function(scope, args){
@@ -518,9 +532,11 @@ var tokenConverters = [
             while(args.hasNext()){
                 nextArg = args.next();
                 if(!nextArg){
-                    return false;
+                    break;
                 }
             }
+            var rawResult = args.getRaw(args.length-1);
+            args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
         "object":function(scope, args){
@@ -637,7 +653,7 @@ var tokenConverters = [
                 sortFunction = args.next(),
                 result,
                 sourceArrayKeys,
-                sortValues = [];
+                caller = this;
 
             if(!Array.isArray(source)){
                 return;
@@ -646,7 +662,7 @@ var tokenConverters = [
             // no subpaths, just do a normal sort.
             if(!sourcePathInfo.path){
                 return source.slice().sort(function(value1, value2){
-                    return scope.callWith(sortFunction, [value1,value2], this);
+                    return scope.callWith(sortFunction, [value1,value2], caller);
                 });
             }
 
@@ -660,7 +676,7 @@ var tokenConverters = [
                 var value1 = source[sourcePathInfo.subPaths.indexOf(path1)],
                     value2 = source[sourcePathInfo.subPaths.indexOf(path2)];
 
-                return scope.callWith(sortFunction, [value1,value2], this);
+                return scope.callWith(sortFunction, [value1,value2], caller);
             });
 
             for(var i = 0; i < sortedPaths.length; i++) {
@@ -678,12 +694,13 @@ var tokenConverters = [
             var source = args.next(),
                 functionToCompare = args.next(),
                 sourcePathInfo = new SourcePathInfo(args.getRaw(0), source),
-                result;
+                result,
+                caller = this;
 
             if (Array.isArray(source)) {
 
                 fastEach(source, function(item, index){
-                    if(scope.callWith(functionToCompare, [item])){
+                    if(scope.callWith(functionToCompare, [item], caller)){
                         result = item;
                         sourcePathInfo.drillTo(index);
                         args.callee.sourcePathInfo = sourcePathInfo;
@@ -828,7 +845,7 @@ var tokenConverters = [
             while(args.length){
                 objectToCompare = args.pop();
                 for(var key in objectToCompare){
-                    if(!scope.callWith(comparitor, [objectToCompare[key], reference[key]])){
+                    if(!scope.callWith(comparitor, [objectToCompare[key], reference[key]], this)){
                         result = false;
                     }
                 }
@@ -973,36 +990,39 @@ var tokenConverters = [
             }
 
             for(var i = 0; i < array.length; i++){
-                result = scope.callWith(fn, [result, array[i]]);
+                result = scope.callWith(fn, [result, array[i]], this);
             }
 
             return result;
         },
         "partial": function(scope, args){
             var outerArgs = args.all(),
-                fn = outerArgs.shift();
+                fn = outerArgs.shift(),
+                caller = this;
 
             return function(scope, args){
                 var innerArgs = args.all();
-                return scope.callWith(fn, outerArgs.concat(innerArgs));
+                return scope.callWith(fn, outerArgs.concat(innerArgs), caller);
             };
         },
         "flip": function(scope, args){
             var outerArgs = args.all().reverse(),
-                fn = outerArgs.pop();
+                fn = outerArgs.pop(),
+                caller = this;
 
             return function(scope, args){
-                return scope.callWith(fn, outerArgs)
+                return scope.callWith(fn, outerArgs, caller)
             };
         },
         "compose": function(scope, args){
-            var outerArgs = args.all().reverse();
+            var outerArgs = args.all().reverse(),
+                caller = this;
 
             return function(scope, args){
-                var result = scope.callWith(outerArgs[0], args.all());
+                var result = scope.callWith(outerArgs[0], args.all(),caller);
 
                 for(var i = 1; i < outerArgs.length; i++){
-                    result = scope.callWith(outerArgs[i], [result]);
+                    result = scope.callWith(outerArgs[i], [result],caller);
                 }
 
                 return result;
@@ -1012,7 +1032,7 @@ var tokenConverters = [
             var fn = args.next()
                 outerArgs = args.next();
 
-            return scope.callWith(fn, outerArgs);
+            return scope.callWith(fn, outerArgs, this);
         },
         "zip": function(scope, args){
             var allArgs = args.all(),
