@@ -826,7 +826,8 @@ var tokenConverters = [
             return source[0];
         },
         "length":function(scope, args){
-            return args.next().length;
+            var value = args.next();
+            return value != null ? value.length : undefined;
         },
         "getValue":function(scope, args){
             var source = args.next(),
