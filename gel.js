@@ -67,7 +67,8 @@ function createKeywordTokeniser(Constructor, keyword){
 
 function StringToken(){}
 StringToken = createSpec(StringToken, Token);
-StringToken.prototype.precedence = 2;
+StringToken.tokenPrecedence = 2;
+StringToken.prototype.parsePrecedence = 2;
 StringToken.prototype.stringTerminal = '"';
 StringToken.prototype.name = 'StringToken';
 StringToken.tokenise = function (substring) {
@@ -98,6 +99,8 @@ StringToken.prototype.evaluate = function () {
 
 function String2Token(){}
 String2Token = createSpec(String2Token, StringToken);
+String2Token.tokenPrecedence = 1;
+String2Token.prototype.parsePrecedence = 1;
 String2Token.prototype.stringTerminal = "'";
 String2Token.prototype.name = 'String2Token';
 String2Token.tokenise = StringToken.tokenise;
@@ -105,6 +108,8 @@ String2Token.tokenise = StringToken.tokenise;
 function ParenthesesToken(){
 }
 ParenthesesToken = createSpec(ParenthesesToken, Token);
+ParenthesesToken.tokenPrecedence = 1;
+ParenthesesToken.prototype.parsePrecedence = 4;
 ParenthesesToken.prototype.name = 'ParenthesesToken';
 ParenthesesToken.tokenise = function(substring) {
     if(substring.charAt(0) === '(' || substring.charAt(0) === ')'){
@@ -132,6 +137,8 @@ ParenthesesToken.prototype.evaluate = function(scope){
 
 function NumberToken(){}
 NumberToken = createSpec(NumberToken, Token);
+NumberToken.tokenPrecedence = 2;
+NumberToken.prototype.parsePrecedence = 2;
 NumberToken.prototype.name = 'NumberToken';
 NumberToken.tokenise = function(substring) {
     var specials = {
@@ -172,14 +179,16 @@ function ValueToken(value, path, key){
     this.sourcePathInfo.drillTo(key);
 }
 ValueToken = createSpec(ValueToken, Token);
+ValueToken.tokenPrecedence = 2;
+ValueToken.prototype.parsePrecedence = 2;
 ValueToken.prototype.name = 'ValueToken';
 ValueToken.prototype.evaluate = function(){};
-ValueToken.prototype.precedence = 2;
 
 function NullToken(){}
 NullToken = createSpec(NullToken, Token);
+NullToken.tokenPrecedence = 2;
+NullToken.prototype.parsePrecedence = 2;
 NullToken.prototype.name = 'NullToken';
-NullToken.prototype.precedence = 2;
 NullToken.tokenise = createKeywordTokeniser(NullToken, "null");
 NullToken.prototype.evaluate = function(scope){
     this.result = null;
@@ -187,8 +196,9 @@ NullToken.prototype.evaluate = function(scope){
 
 function UndefinedToken(){}
 UndefinedToken = createSpec(UndefinedToken, Token);
+UndefinedToken.tokenPrecedence = 2;
+UndefinedToken.prototype.parsePrecedence = 2;
 UndefinedToken.prototype.name = 'UndefinedToken';
-UndefinedToken.prototype.precedence = 2;
 UndefinedToken.tokenise = createKeywordTokeniser(UndefinedToken, 'undefined');
 UndefinedToken.prototype.evaluate = function(scope){
     this.result = undefined;
@@ -196,8 +206,9 @@ UndefinedToken.prototype.evaluate = function(scope){
 
 function TrueToken(){}
 TrueToken = createSpec(TrueToken, Token);
+TrueToken.tokenPrecedence = 2;
+TrueToken.prototype.parsePrecedence = 2;
 TrueToken.prototype.name = 'TrueToken';
-TrueToken.prototype.precedence = 2;
 TrueToken.tokenise = createKeywordTokeniser(TrueToken, 'true');
 TrueToken.prototype.evaluate = function(scope){
     this.result = true;
@@ -205,8 +216,9 @@ TrueToken.prototype.evaluate = function(scope){
 
 function FalseToken(){}
 FalseToken = createSpec(FalseToken, Token);
+FalseToken.tokenPrecedence = 2;
+FalseToken.prototype.parsePrecedence = 2;
 FalseToken.prototype.name = 'FalseToken';
-FalseToken.prototype.precedence = 2;
 FalseToken.tokenise = createKeywordTokeniser(FalseToken, 'false');
 FalseToken.prototype.evaluate = function(scope){
     this.result = false;
@@ -214,8 +226,9 @@ FalseToken.prototype.evaluate = function(scope){
 
 function DelimiterToken(){}
 DelimiterToken = createSpec(DelimiterToken, Token);
+DelimiterToken.tokenPrecedence = 1;
+DelimiterToken.prototype.parsePrecedence = 1;
 DelimiterToken.prototype.name = 'DelimiterToken';
-DelimiterToken.prototype.precedence = 2;
 DelimiterToken.tokenise = function(substring) {
     var i = 0;
     while(i < substring.length && substring.charAt(i).trim() === "" || substring.charAt(i) === ',') {
@@ -232,8 +245,9 @@ DelimiterToken.prototype.parse = function(tokens, position){
 
 function IdentifierToken(){}
 IdentifierToken = createSpec(IdentifierToken, Token);
+IdentifierToken.tokenPrecedence = 3;
+IdentifierToken.prototype.parsePrecedence = 3;
 IdentifierToken.prototype.name = 'IdentifierToken';
-IdentifierToken.prototype.precedence = 3;
 IdentifierToken.tokenise = function(substring){
     var result = tokeniseIdentifier(substring);
 
@@ -254,7 +268,8 @@ IdentifierToken.prototype.evaluate = function(scope){
 function PeriodToken(){}
 PeriodToken = createSpec(PeriodToken, Token);
 PeriodToken.prototype.name = 'PeriodToken';
-PeriodToken.prototype.precedence = 1;
+PeriodToken.tokenPrecedence = 2;
+PeriodToken.prototype.parsePrecedence = 5;
 PeriodToken.tokenise = function(substring){
     var periodConst = ".";
     return (substring.charAt(0) === periodConst) ? new PeriodToken(periodConst, 1) : undefined;
@@ -288,8 +303,74 @@ PeriodToken.prototype.evaluate = function(scope){
     }
 };
 
+function PipeToken(){}
+PipeToken = createSpec(PipeToken, Token);
+PipeToken.prototype.name = 'PipeToken';
+PipeToken.tokenPrecedence = 1;
+PipeToken.prototype.parsePrecedence = 5;
+PipeToken.tokenise = function(substring){
+    var pipeConst = "|>";
+    return (substring.slice(0,2) === pipeConst) ? new PipeToken(pipeConst, pipeConst.length) : undefined;
+};
+PipeToken.prototype.parse = function(tokens, position){
+    this.argumentToken = tokens.splice(position-1,1)[0];
+    this.functionToken = tokens.splice(position,1)[0];
+};
+PipeToken.prototype.evaluate = function(scope){
+    scope = new Scope(scope);
+
+    var functionToken = this.functionToken;
+
+    if(!functionToken){
+        throw "Invalid function call. No function was provided to execute.";
+    }
+
+
+    functionToken.evaluate(scope);
+
+    if(typeof functionToken.result !== 'function'){
+        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    }
+
+    this.result = scope.callWith(functionToken.result, [this.argumentToken], this);
+};
+
+function PipeApplyToken(){}
+PipeApplyToken = createSpec(PipeApplyToken, Token);
+PipeApplyToken.prototype.name = 'PipeApplyToken';
+PipeApplyToken.tokenPrecedence = 1;
+PipeApplyToken.prototype.parsePrecedence = 5;
+PipeApplyToken.tokenise = function(substring){
+    var pipeConst = "~>";
+    return (substring.slice(0,2) === pipeConst) ? new PipeApplyToken(pipeConst, pipeConst.length) : undefined;
+};
+PipeApplyToken.prototype.parse = function(tokens, position){
+    this.argumentToken = tokens.splice(position-1,1)[0];
+    this.functionToken = tokens.splice(position,1)[0];
+};
+PipeApplyToken.prototype.evaluate = function(scope){
+    scope = new Scope(scope);
+
+    var functionToken = this.functionToken;
+
+    if(!functionToken){
+        throw "Invalid function call. No function was provided to execute.";
+    }
+
+
+    functionToken.evaluate(scope);
+
+    if(typeof functionToken.result !== 'function'){
+        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    }
+
+    this.result = scope.callWith(functionToken.result, this.argumentToken, this);
+};
+
 function FunctionToken(){}
 FunctionToken = createSpec(FunctionToken, Token);
+FunctionToken.tokenPrecedence = 1;
+FunctionToken.prototype.parsePrecedence = 2;
 FunctionToken.prototype.name = 'FunctionToken';
 FunctionToken.tokenise = function convertFunctionToken(substring) {
     if(substring.charAt(0) === '{' || substring.charAt(0) === '}'){
@@ -424,6 +505,8 @@ var tokenConverters = [
         DelimiterToken,
         IdentifierToken,
         PeriodToken,
+        PipeToken,
+        PipeApplyToken,
         FunctionToken
     ],
     scope = {
@@ -661,7 +744,7 @@ var tokenConverters = [
                 sortFunction = args.next(),
                 result,
                 sourceArrayKeys,
-                caller = this;
+                caller = args.callee;
 
             if(!Array.isArray(source)){
                 return;
@@ -703,7 +786,7 @@ var tokenConverters = [
                 functionToCompare = args.next(),
                 sourcePathInfo = new SourcePathInfo(args.getRaw(0), source),
                 result,
-                caller = this;
+                caller = args.callee;
 
             if (Array.isArray(source)) {
 
@@ -945,22 +1028,30 @@ var tokenConverters = [
             return stringFormat(args.shift(), args);
         },
         "refine": function(scope, args){
-            var args = args.all(),
-                exclude = typeof args[0] === "boolean" && args.shift(),
-                original = args.shift(),
-                refined = {};
+            var allArgs = args.all(),
+                exclude = typeof allArgs[0] === "boolean" && allArgs.shift(),
+                original = allArgs.shift(),
+                refined = {},
+                sourcePathInfo = new SourcePathInfo(args.getRaw(exclude ? 1 : 0), original, true);
 
-            for(var i = 0; i < args.length; i++){
-                args[i] = args[i].toString();
+            for(var i = 0; i < allArgs.length; i++){
+                allArgs[i] = allArgs[i].toString();
             }
+
 
             for(var key in original){
-                if(args.indexOf(key)>=0){
-                    !exclude && (refined[key] = original[key]);
+                if(allArgs.indexOf(key)>=0){
+                    if(!exclude){
+                        refined[key] = original[key];
+                        sourcePathInfo.setSubPath(key, key);
+                    }
                 }else if(exclude){
                     refined[key] = original[key];
+                    sourcePathInfo.setSubPath(key, key);
                 }
             }
+
+            args.callee.sourcePathInfo = sourcePathInfo;
 
             return refined;
         },
@@ -1004,20 +1095,22 @@ var tokenConverters = [
 
             return result;
         },
-        "partial": function(scope, args){
-            var outerArgs = args.all(),
-                fn = outerArgs.shift(),
-                caller = this;
+        "partial": function(scope, outerArgs){
+            var fn = outerArgs.get(0),
+                caller = outerArgs.callee;
 
-            return function(scope, args){
-                var innerArgs = args.all();
-                return scope.callWith(fn, outerArgs.concat(innerArgs), caller);
+            return function(scope, innerArgs){
+                var result = scope.callWith(fn, outerArgs.raw().slice(1).concat(innerArgs.raw()), caller);
+
+                innerArgs.callee.sourcePathInfo = outerArgs.callee.sourcePathInfo;
+
+                return result;
             };
         },
         "flip": function(scope, args){
             var outerArgs = args.all().reverse(),
                 fn = outerArgs.pop(),
-                caller = this;
+                caller = args.callee;
 
             return function(scope, args){
                 return scope.callWith(fn, outerArgs, caller)
@@ -1025,7 +1118,7 @@ var tokenConverters = [
         },
         "compose": function(scope, args){
             var outerArgs = args.all().reverse(),
-                caller = this;
+                caller = args.callee;
 
             return function(scope, args){
                 var result = scope.callWith(outerArgs[0], args.all(),caller);
@@ -1041,7 +1134,7 @@ var tokenConverters = [
             var fn = args.next()
                 outerArgs = args.next();
 
-            return scope.callWith(fn, outerArgs, this);
+            return scope.callWith(fn, outerArgs, args.callee);
         },
         "zip": function(scope, args){
             var allArgs = args.all(),

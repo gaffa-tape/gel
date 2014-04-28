@@ -18,6 +18,8 @@ var Gel = require('./gel'),
         output = crel('pre')
     );
 
+window.gel = gel;
+
 function run(event){
     if(event.which === 13 && event.shiftKey){
         try{

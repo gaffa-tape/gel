@@ -555,7 +555,7 @@ test('(object "key" "value")', function (t) {
 });
 test('(date)', function (t) {
   t.plan(1);
-  t.equal(gel.evaluate(t.name, context).toString(), new Date().toString());
+  t.ok(gel.evaluate(t.name, context) instanceof Date);
   t.end();
 });
 test('(date 123 123 123)', function (t) {
@@ -565,17 +565,17 @@ test('(date 123 123 123)', function (t) {
 });
 test('(date 1355745289462)', function (t) {
   t.plan(1);
-  t.equal(gel.evaluate(t.name, context).toString(), "Mon Dec 17 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
+  t.ok(gel.evaluate(t.name, context).toString().indexOf("Mon Dec 17 2012 21:54:49") === 0);
   t.end();
 });
 test('(date.addDays (date 1355745289462) 7)', function (t) {
   t.plan(1);
-  t.equal(gel.evaluate(t.name, context).toString(), "Mon Dec 24 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
+  t.ok(gel.evaluate(t.name, context).toString().indexOf("Mon Dec 24 2012 21:54:49") === 0);
   t.end();
 });
 test('(date.addDays (date 1355745289462) -7)', function (t) {
   t.plan(1);
-  t.equal(gel.evaluate(t.name, context).toString(), "Mon Dec 10 2012 21:54:49 GMT+1000 (E. Australia Standard Time)");
+  t.ok(gel.evaluate(t.name, context).toString().indexOf("Mon Dec 10 2012 21:54:49") === 0);
   t.end();
 });
 test('(max 1 5 3 4 2)', function (t) {
@@ -802,6 +802,14 @@ test('(zip (array 1 2 3) (array "a" "b" "c")(array "foo" "bar" "meh"))', functio
     t.deepEqual(
         gel.evaluate(t.name, context),
         [1,'a', 'foo',2,'b','bar',3,'c','meh']
+    );
+    t.end();
+});
+test('(array 1 2 3) |> last', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        3
     );
     t.end();
 });
