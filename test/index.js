@@ -813,3 +813,11 @@ test('(array 1 2 3) |> last', function (t) {
     );
     t.end();
 });
+test('(array 1 2 3) ~> (partial join " ")', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        "1 2 3"
+    );
+    t.end();
+});

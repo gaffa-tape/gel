@@ -330,20 +330,17 @@ PipeToken.prototype.parse = function(tokens, position){
 PipeToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
-    var functionToken = this.functionToken;
-
-    if(!functionToken){
+    if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
 
+    this.functionToken.evaluate(scope);
 
-    functionToken.evaluate(scope);
-
-    if(typeof functionToken.result !== 'function'){
-        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    if(typeof this.functionToken.result !== 'function'){
+        throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
     }
 
-    this.result = scope.callWith(functionToken.result, [this.argumentToken], this);
+    this.result = scope.callWith(this.functionToken.result, [this.argumentToken], this);
 };
 
 function PipeApplyToken(){}
@@ -356,26 +353,28 @@ PipeApplyToken.tokenise = function(substring){
     return (substring.slice(0,2) === pipeConst) ? new PipeApplyToken(pipeConst, pipeConst.length) : undefined;
 };
 PipeApplyToken.prototype.parse = function(tokens, position){
-    this.argumentToken = tokens.splice(position-1,1)[0];
+    this.argumentsToken = tokens.splice(position-1,1)[0];
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeApplyToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
-    var functionToken = this.functionToken;
-
-    if(!functionToken){
+    if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
 
-
-    functionToken.evaluate(scope);
-
-    if(typeof functionToken.result !== 'function'){
-        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    if(!this.argumentsToken){
+        throw "Invalid function call. No arguments were provided to apply.";
     }
 
-    this.result = scope.callWith(functionToken.result, this.argumentToken, this);
+    this.functionToken.evaluate(scope);
+    this.argumentsToken.evaluate(scope);
+
+    if(typeof this.functionToken.result !== 'function'){
+        throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
+    }
+
+    this.result = scope.callWith(this.functionToken.result, this.argumentsToken.result, this);
 };
 
 function FunctionToken(){}
