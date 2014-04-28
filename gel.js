@@ -112,7 +112,7 @@ ParenthesesToken.tokenPrecedence = 1;
 ParenthesesToken.prototype.parsePrecedence = 4;
 ParenthesesToken.prototype.name = 'ParenthesesToken';
 ParenthesesToken.tokenise = function(substring) {
-    if(substring.charAt(0) === '(' || substring.charAt(0) === ')'){
+    if(substring.charAt(0) === '('){
         return new ParenthesesToken(substring.charAt(0), 1);
     }
 }
@@ -133,6 +133,17 @@ ParenthesesToken.prototype.evaluate = function(scope){
     }
 
     this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
+};
+
+function ParenthesesEndToken(){}
+ParenthesesEndToken = createSpec(ParenthesesEndToken, Token);
+ParenthesesEndToken.tokenPrecedence = 1;
+ParenthesesEndToken.prototype.parsePrecedence = 4;
+ParenthesesEndToken.prototype.name = 'ParenthesesEndToken';
+ParenthesesEndToken.tokenise = function(substring) {
+    if(substring.charAt(0) === ')'){
+        return new ParenthesesEndToken(substring.charAt(0), 1);
+    }
 };
 
 function NumberToken(){}
@@ -370,10 +381,10 @@ PipeApplyToken.prototype.evaluate = function(scope){
 function FunctionToken(){}
 FunctionToken = createSpec(FunctionToken, Token);
 FunctionToken.tokenPrecedence = 1;
-FunctionToken.prototype.parsePrecedence = 2;
+FunctionToken.prototype.parsePrecedence = 3;
 FunctionToken.prototype.name = 'FunctionToken';
-FunctionToken.tokenise = function convertFunctionToken(substring) {
-    if(substring.charAt(0) === '{' || substring.charAt(0) === '}'){
+FunctionToken.tokenise = function(substring) {
+    if(substring.charAt(0) === '{'){
         return new FunctionToken(substring.charAt(0), 1);
     }
 };
@@ -398,6 +409,17 @@ FunctionToken.prototype.evaluate = function(scope){
 
         return fnBody.result;
     };
+};
+
+function FunctionEndToken(){}
+FunctionEndToken = createSpec(FunctionEndToken, Token);
+FunctionEndToken.tokenPrecedence = 1;
+FunctionEndToken.prototype.parsePrecedence = 4;
+FunctionEndToken.prototype.name = 'FunctionEndToken';
+FunctionEndToken.tokenise = function(substring) {
+    if(substring.charAt(0) === '}'){
+        return new FunctionEndToken(substring.charAt(0), 1);
+    }
 };
 
 function SourcePathInfo(token, source, trackSubPaths){
@@ -497,6 +519,7 @@ var tokenConverters = [
         StringToken,
         String2Token,
         ParenthesesToken,
+        ParenthesesEndToken,
         NumberToken,
         NullToken,
         UndefinedToken,
@@ -507,7 +530,8 @@ var tokenConverters = [
         PeriodToken,
         PipeToken,
         PipeApplyToken,
-        FunctionToken
+        FunctionToken,
+        FunctionEndToken
     ],
     scope = {
         "toString":function(scope, args){
