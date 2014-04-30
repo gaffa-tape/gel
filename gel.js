@@ -116,7 +116,7 @@ ParenthesesToken.tokenise = function(substring) {
         return new ParenthesesToken(substring.charAt(0), 1);
     }
 }
-ParenthesesToken.prototype.parse = createNestingParser(/^\($/,/^\)$/);
+ParenthesesToken.prototype.parse = createNestingParser(ParenthesesEndToken);
 ParenthesesToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
@@ -387,7 +387,7 @@ FunctionToken.tokenise = function(substring) {
         return new FunctionToken(substring.charAt(0), 1);
     }
 };
-FunctionToken.prototype.parse = createNestingParser(/^\{$/,/^\}$/);
+FunctionToken.prototype.parse = createNestingParser(FunctionEndToken);
 FunctionToken.prototype.evaluate = function(scope){
     var parameterNames = this.childTokens.slice(),
         fnBody = parameterNames.pop();

@@ -165,6 +165,11 @@ test('(&& 1 2)', function (t) {
   t.equal(gel.evaluate(t.name, context), 2);
   t.end();
 });
+test('(&& (!= 1 2) (!= null 3) (!= null 4) (> 4 3))', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), true);
+  t.end();
+});
 test('(+ 0 2)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 2);
