@@ -654,10 +654,24 @@ var tokenConverters = [
             return nextArg;
         },
         "object":function(scope, args){
-            var result = {};
-            while(args.hasNext()){
-                result[args.next()] = args.next();
+            var result = {},
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, {}, true);
+
+            for(var i = 0; i < args.length; i+=2){
+                var key = args.get(i),
+                    valueToken = args.getRaw(i+1),
+                    value = args.get(i+1);
+
+                result[key] = value;
+
+                if(valueToken.sourcePathInfo){
+                    sourcePathInfo.subPaths[key] = valueToken.sourcePathInfo.path;
+                }
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "keys":function(scope, args){
