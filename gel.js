@@ -666,10 +666,18 @@ var tokenConverters = [
         },
         "values":function(scope, args){
             var target = args.next(),
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), target, true),
                 result = [];
+
             for(var key in target){
                 result.push(target[key]);
+
+                sourcePathInfo.setSubPath(result.length - 1, key);
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "invert":function(scope, args){
@@ -719,7 +727,7 @@ var tokenConverters = [
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
                     }
-                };
+                }
             }
 
             args.callee.sourcePathInfo = sourcePathInfo;
