@@ -654,10 +654,24 @@ var tokenConverters = [
             return nextArg;
         },
         "object":function(scope, args){
-            var result = {};
-            while(args.hasNext()){
-                result[args.next()] = args.next();
+            var result = {},
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, {}, true);
+
+            for(var i = 0; i < args.length; i+=2){
+                var key = args.get(i),
+                    valueToken = args.getRaw(i+1),
+                    value = args.get(i+1);
+
+                result[key] = value;
+
+                if(valueToken.sourcePathInfo){
+                    sourcePathInfo.subPaths[key] = valueToken.sourcePathInfo.path;
+                }
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "keys":function(scope, args){
@@ -666,10 +680,18 @@ var tokenConverters = [
         },
         "values":function(scope, args){
             var target = args.next(),
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), target, true),
                 result = [];
+
             for(var key in target){
                 result.push(target[key]);
+
+                sourcePathInfo.setSubPath(result.length - 1, key);
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "invert":function(scope, args){
@@ -719,7 +741,7 @@ var tokenConverters = [
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
                     }
-                };
+                }
             }
 
             args.callee.sourcePathInfo = sourcePathInfo;
