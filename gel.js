@@ -816,7 +816,7 @@ var tokenConverters = [
             });
 
             for(var i = 0; i < sortedPaths.length; i++) {
-                result[paths.toParts(sortedPaths[i]).pop()] = source[i];
+                result[i] = sourcePathInfo.original[paths.toParts(sortedPaths[i]).pop()];
             }
 
             sourcePathInfo.setSubPaths(sortedPaths);
@@ -867,7 +867,7 @@ var tokenConverters = [
                         }
                     }
                 }
-            }
+            };
 
             addPaths();
 
@@ -1109,7 +1109,7 @@ var tokenConverters = [
                 var baseDate = args.next();
 
                 return new Date(baseDate.setDate(baseDate.getDate() + args.next()));
-            }
+            };
 
             return date;
         })(),
@@ -1158,7 +1158,7 @@ var tokenConverters = [
                 caller = args.callee;
 
             return function(scope, args){
-                return scope.callWith(fn, outerArgs, caller)
+                return scope.callWith(fn, outerArgs, caller);
             };
         },
         "compose": function(scope, args){
@@ -1176,7 +1176,7 @@ var tokenConverters = [
             };
         },
         "apply": function(scope, args){
-            var fn = args.next()
+            var fn = args.next(),
                 outerArgs = args.next();
 
             return scope.callWith(fn, outerArgs, args.callee);
@@ -1215,7 +1215,7 @@ Gel = function(){
     gel.lang = lang;
     gel.tokenise = function(expression){
         return gel.lang.tokenise(expression, this.tokenConverters);
-    }
+    };
     gel.evaluate = function(expression, injectedScope, returnAsTokens){
         var scope = new Scope();
 
