@@ -705,6 +705,8 @@ var tokenConverters = [
                 }
             }
 
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "object":function(scope, args){
