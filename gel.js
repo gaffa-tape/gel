@@ -318,7 +318,7 @@ function PipeToken(){}
 PipeToken = createSpec(PipeToken, Token);
 PipeToken.prototype.name = 'PipeToken';
 PipeToken.tokenPrecedence = 1;
-PipeToken.prototype.parsePrecedence = 5;
+PipeToken.prototype.parsePrecedence = 6;
 PipeToken.tokenise = function(substring){
     var pipeConst = "|>";
     return (substring.slice(0,2) === pipeConst) ? new PipeToken(pipeConst, pipeConst.length) : undefined;
@@ -347,7 +347,7 @@ function PipeApplyToken(){}
 PipeApplyToken = createSpec(PipeApplyToken, Token);
 PipeApplyToken.prototype.name = 'PipeApplyToken';
 PipeApplyToken.tokenPrecedence = 1;
-PipeApplyToken.prototype.parsePrecedence = 5;
+PipeApplyToken.prototype.parsePrecedence = 6;
 PipeApplyToken.tokenise = function(substring){
     var pipeConst = "~>";
     return (substring.slice(0,2) === pipeConst) ? new PipeApplyToken(pipeConst, pipeConst.length) : undefined;
@@ -653,27 +653,6 @@ var tokenConverters = [
             args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
-        "object":function(scope, args){
-            var result = {},
-                callee = args.callee,
-                sourcePathInfo = new SourcePathInfo(null, {}, true);
-
-            for(var i = 0; i < args.length; i+=2){
-                var key = args.get(i),
-                    valueToken = args.getRaw(i+1),
-                    value = args.get(i+1);
-
-                result[key] = value;
-
-                if(valueToken.sourcePathInfo){
-                    sourcePathInfo.subPaths[key] = valueToken.sourcePathInfo.path;
-                }
-            }
-
-            callee.sourcePathInfo = sourcePathInfo;
-
-            return result;
-        },
         "keys":function(scope, args){
             var object = args.next();
             return typeof object === 'object' ? Object.keys(object) : undefined;
@@ -713,10 +692,40 @@ var tokenConverters = [
             return result;
         },
         "array":function(scope, args){
-            var result = [];
-            while(args.hasNext()){
-                result.push(args.next());
+            var argTokens = args.raw(),
+                argValues = args.all(),
+                result = [],
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, [], true);
+
+            for(var i = 0; i < argValues.length; i++) {
+                result.push(argValues[i]);
+                if(argTokens[i] instanceof Token && argTokens[i].sourcePathInfo){
+                    sourcePathInfo.subPaths[i] = argTokens[i].sourcePathInfo.path;
+                }
             }
+
+            return result;
+        },
+        "object":function(scope, args){
+            var result = {},
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, {}, true);
+
+            for(var i = 0; i < args.length; i+=2){
+                var key = args.get(i),
+                    valueToken = args.getRaw(i+1),
+                    value = args.get(i+1);
+
+                result[key] = value;
+
+                if(valueToken instanceof Token && valueToken.sourcePathInfo){
+                    sourcePathInfo.subPaths[key] = valueToken.sourcePathInfo.path;
+                }
+            }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "map":function(scope, args){
