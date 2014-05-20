@@ -730,35 +730,6 @@ var tokenConverters = [
 
             return result;
         },
-        "map":function(scope, args){
-            var source = args.next(),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
-                isArray = Array.isArray(source),
-                result = isArray ? [] : {},
-                functionToken = args.next();
-
-            if(isArray){
-                fastEach(source, function(item, index){
-                    var callee = {};
-                    result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
-                    if(callee.sourcePathInfo){
-                        sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
-                    }
-                });
-            }else{
-                for(var key in source){
-                    var callee = {};
-                    result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
-                    if(callee.sourcePathInfo){
-                        sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
-                    }
-                }
-            }
-
-            args.callee.sourcePathInfo = sourcePathInfo;
-
-            return result;
-        },
         "pairs": function(scope, args){
             var target = args.next(),
                 result = [];
@@ -1130,24 +1101,60 @@ var tokenConverters = [
         "fromJSON":function(scope, args){
             return JSON.parse(args.next());
         },
-        "fold": function(scope, args){
-            var args = args.all(),
-                fn = args.pop(),
-                seed = args.pop(),
-                array = args[0],
-                result = seed;
+        "map":function(scope, args){
+            var source = args.next(),
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
+                isArray = Array.isArray(source),
+                result = isArray ? [] : {},
+                functionToken = args.next();
 
-            if(args.length > 1){
-                array = args;
+            if(isArray){
+                fastEach(source, function(item, index){
+                    var callee = {};
+                    result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
+                    }
+                });
+            }else{
+                for(var key in source){
+                    var callee = {};
+                    result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
+                    }
+                }
             }
 
-            if(!array || !array.length){
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return result;
+        },
+        "fold": function(scope, args){
+            var argValues = args.all(),
+                fn = argValues.pop(),
+                seed = argValues.pop(),
+                source = argValues[0],
+                result = seed,
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true);
+
+            if(argValues.length > 1){
+                source = argValues;
+            }
+
+            if(!source || !source.length){
                 return result;
             }
 
-            for(var i = 0; i < array.length; i++){
-                result = scope.callWith(fn, [result, array[i]], this);
+            for(var i = 0; i < source.length; i++){
+                var callee = {};
+                result = scope.callWith(fn, [result, source[i]], callee);
+                if(callee.sourcePathInfo && callee.sourcePathInfo.subPaths){
+                    sourcePathInfo.subPaths[i] = callee.sourcePathInfo.subPaths[i];
+                }
             }
+
+            args.callee.sourcePathInfo = sourcePathInfo;
 
             return result;
         },
