@@ -28,7 +28,8 @@
   "dependencies": {
     "lang-js": "^2.0.0",
     "spec-js": "0.0.x",
-    "gedi-paths": "0.4.x"
+    "gedi-paths": "0.4.x",
+    "merge": "^1.1.3"
   },
   "keywords": [
     "gel",

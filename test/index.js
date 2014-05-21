@@ -826,3 +826,99 @@ test('(array 1 2 3) ~> (partial join " ")', function (t) {
     );
     t.end();
 });
+test('(parseInt 3.2)', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('(parseFloat "1.2")', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        1.2
+    );
+    t.end();
+});
+test('(toFixed 2.34567)', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        "2.35"
+    );
+    t.end();
+});
+test('(toFixed 2)', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        "2.00"
+    );
+    t.end();
+});
+test('(toFixed 2 10)', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        "2.0000000000"
+    );
+    t.end();
+});
+test('({obj (keyFor obj.a obj)} (object "a" (object)))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        'a'
+    );
+    t.end();
+});
+test('(merge (object "a" 1) (object "b" 2))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        {a:1,b:2}
+    );
+    t.end();
+});
+test('(merge (object "a" 1) (object "b" 2) (object "c" 3))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        {a:1,b:2,c:3}
+    );
+    t.end();
+});
+test('(regex "(.)" "g")', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        new RegExp('(.)', 'g')
+    );
+    t.end();
+});
+test('(match "hello world" (regex "(.ld)" "g"))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        ['rld']
+    );
+    t.end();
+});
+test('(match "thing thing" (regex "(thing)" "g"))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        ['thing', 'thing']
+    );
+    t.end();
+});
+test('(math.sqrt 1234)', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        35.12833614050059
+    );
+    t.end();
+});

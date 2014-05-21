@@ -1,5 +1,6 @@
 var Lang = require('lang-js'),
     paths = require('gedi-paths'),
+    merge = require('merge'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,
@@ -514,6 +515,15 @@ function gelFilter(scope, args) {
     return filteredItems;
 }
 
+function gelMerge(scope, args){
+    var result = {};
+    while(args.hasNext()){
+        var nextObject = args.next();
+        result = merge(result, nextObject);
+    }
+    return result;
+}
+
 var tokenConverters = [
         StringToken,
         String2Token,
@@ -533,6 +543,22 @@ var tokenConverters = [
         FunctionEndToken
     ],
     scope = {
+        "parseInt":function(scope, args){
+            return parseInt(args.next());
+        },
+        "parseFloat":function(scope, args){
+            return parseFloat(args.next());
+        },
+        "toFixed": function(scope, args){
+            var num = args.next(),
+                decimals = args.get(1) || 2;
+
+            if(isNaN(num)){
+                return;
+            }
+
+            return num.toFixed(decimals);
+        },
         "toString":function(scope, args){
             return "" + args.next();
         },
@@ -702,16 +728,8 @@ var tokenConverters = [
             }
             return result;
         },
-        "extend":function(scope, args){
-            var result = {};
-            while(args.hasNext()){
-                var nextObject = args.next();
-                for(var key in nextObject){
-                    result[key] = nextObject[key];
-                }
-            }
-            return result;
-        },
+        "extend": gelMerge,
+        "merge": gelMerge,
         "array":function(scope, args){
             var result = [];
             while(args.hasNext()){
@@ -1204,8 +1222,52 @@ var tokenConverters = [
             }
 
             return result;
+        },
+        "keyFor": function(scope, args){
+            var value = args.next(),
+                target = args.next();
+
+            for(var key in target){
+                if(!target.hasOwnProperty(key)){
+                    continue;
+                }
+
+                if(target[key] === value){
+                    return key;
+                }
+            }
+        },
+        "regex": function(scope, args){
+            var all = args.all();
+
+            return new RegExp(all[0], all[1]);
+        },
+        "match": function(scope, args){
+            var string = args.next();
+
+            if(typeof string !== 'string'){
+                return false;
+            }
+
+            return string.match(args.next());
         }
     };
+
+function createMathFunction(key){
+    return function(scope, args){
+        var all = args.all();
+        return Math[key].apply(Math, all);
+    };
+}
+
+scope.math = {};
+
+var mathFunctionNames = ['abs','acos','asin','atan','atan2','ceil','cos','exp','floor','imul','log','max','min','pow','random','round','sin','sqrt','tan'];
+
+for(var i = 0; i < mathFunctionNames.length; i++){
+    var key = mathFunctionNames[i];
+    scope.math[key] = createMathFunction(key);
+}
 
 
 Gel = function(){
