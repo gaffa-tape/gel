@@ -378,20 +378,40 @@ PipeApplyToken.prototype.evaluate = function(scope){
     this.result = scope.callWith(this.functionToken.result, this.argumentsToken.result, this);
 };
 
-function FunctionToken(){}
-FunctionToken = createSpec(FunctionToken, Token);
-FunctionToken.tokenPrecedence = 1;
-FunctionToken.prototype.parsePrecedence = 3;
-FunctionToken.prototype.name = 'FunctionToken';
-FunctionToken.tokenise = function(substring) {
+function BraceToken(){}
+BraceToken = createSpec(BraceToken, Token);
+BraceToken.tokenPrecedence = 1;
+BraceToken.prototype.parsePrecedence = 3;
+BraceToken.prototype.name = 'BraceToken';
+BraceToken.tokenise = function(substring) {
     if(substring.charAt(0) === '{'){
-        return new FunctionToken(substring.charAt(0), 1);
+        return new BraceToken(substring.charAt(0), 1);
     }
 };
-FunctionToken.prototype.parse = createNestingParser(FunctionEndToken);
-FunctionToken.prototype.evaluate = function(scope){
-    var parameterNames = this.childTokens.slice(),
-        fnBody = parameterNames.pop();
+BraceToken.prototype.parse = createNestingParser(BraceEndToken);
+BraceToken.prototype.evaluate = function(scope){
+    var parameterNames = this.childTokens.slice();
+
+    // Object literal
+    if(parameterNames[0] instanceof TupleToken){
+        this.result = {};
+        this.sourcePathInfo = new SourcePathInfo(null, {}, true);
+
+        for(var i = 0; i < parameterNames.length; i++){
+            var token = parameterNames[i];
+            token.evaluate(scope);
+            this.result[token.keyToken.result] = token.valueToken.result;
+
+            if(token.valueToken.sourcePathInfo){
+                sourcePathInfo.subPaths[key] = token.valueToken.sourcePathInfo.path;
+            }
+        };
+
+        return;
+    }
+
+    // Function expression
+    var fnBody = parameterNames.pop();
 
     this.result = function(scope, args){
         scope = new Scope(scope);
@@ -411,15 +431,39 @@ FunctionToken.prototype.evaluate = function(scope){
     };
 };
 
-function FunctionEndToken(){}
-FunctionEndToken = createSpec(FunctionEndToken, Token);
-FunctionEndToken.tokenPrecedence = 1;
-FunctionEndToken.prototype.parsePrecedence = 4;
-FunctionEndToken.prototype.name = 'FunctionEndToken';
-FunctionEndToken.tokenise = function(substring) {
+function BraceEndToken(){}
+BraceEndToken = createSpec(BraceEndToken, Token);
+BraceEndToken.tokenPrecedence = 1;
+BraceEndToken.prototype.parsePrecedence = 4;
+BraceEndToken.prototype.name = 'BraceEndToken';
+BraceEndToken.tokenise = function(substring) {
     if(substring.charAt(0) === '}'){
-        return new FunctionEndToken(substring.charAt(0), 1);
+        return new BraceEndToken(substring.charAt(0), 1);
     }
+};
+
+function Tuple(key, value){
+    this[key] = value;
+}
+
+function TupleToken(){}
+TupleToken = createSpec(TupleToken, Token);
+TupleToken.prototype.name = 'TupleToken';
+TupleToken.tokenPrecedence = 2;
+TupleToken.prototype.parsePrecedence = 5;
+TupleToken.tokenise = function(substring){
+    var tupleConst = ":";
+    return (substring.charAt(0) === tupleConst) ? new TupleToken(tupleConst, 1) : undefined;
+};
+TupleToken.prototype.parse = function(tokens, position){
+    this.keyToken = tokens.splice(position-1,1)[0];
+    this.valueToken = tokens.splice(position, 1)[0];
+};
+TupleToken.prototype.evaluate = function(scope){
+    this.keyToken.evaluate(scope);
+    this.valueToken.evaluate(scope);
+
+    this.result = new Tuple(this.keyToken.result, this.valueToken.result);
 };
 
 function SourcePathInfo(token, source, trackSubPaths){
@@ -539,8 +583,9 @@ var tokenConverters = [
         PeriodToken,
         PipeToken,
         PipeApplyToken,
-        FunctionToken,
-        FunctionEndToken
+        BraceToken,
+        BraceEndToken,
+        TupleToken
     ],
     scope = {
         "parseInt":function(scope, args){

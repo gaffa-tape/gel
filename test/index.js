@@ -685,6 +685,22 @@ test('(object "thing" 5).thing', function (t) {
   t.equal(gel.evaluate(t.name, context), 5);
   t.end();
 });
+test('{"things":"stuff" "whatsits":"majigger"}', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), {things: 'stuff', whatsits: 'majigger'});
+  t.end();
+});
+test('{"thing":5}.thing', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 5);
+  t.end();
+});
+test('{"thing":1}', function (t) {
+  t.plan(1);
+  var tokens = gel.evaluate(t.name, context, true);
+  t.ok(tokens[0].sourcePathInfo);
+  t.end();
+});
 test('(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )', function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate(t.name, context), [2,2]);
