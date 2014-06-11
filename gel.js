@@ -403,7 +403,7 @@ BraceToken.prototype.evaluate = function(scope){
             this.result[token.keyToken.result] = token.valueToken.result;
 
             if(token.valueToken.sourcePathInfo){
-                sourcePathInfo.subPaths[key] = token.valueToken.sourcePathInfo.path;
+                this.sourcePathInfo.subPaths[key] = token.valueToken.sourcePathInfo.path;
             }
         };
 
