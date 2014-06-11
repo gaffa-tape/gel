@@ -1342,14 +1342,14 @@ Gel = function(){
         return gel.lang.tokenise(expression, this.tokenConverters);
     };
     gel.evaluate = function(expression, injectedScope, returnAsTokens){
-        var scope = new Scope();
+        var scope = new Scope(this.scope);
 
-        scope.add(this.scope).add(injectedScope);
+        scope.add(injectedScope);
 
         return lang.evaluate(expression, scope, this.tokenConverters, returnAsTokens);
     };
     gel.tokenConverters = tokenConverters.slice();
-    gel.scope = Object.create(scope);
+    gel.scope = merge({}, scope);
 
     return gel;
 };
