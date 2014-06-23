@@ -1368,6 +1368,10 @@ Gel = function(){
     return gel;
 };
 
+for (var i = 0; i < tokenConverters.length; i++) {
+    Gel[tokenConverters[i].prototype.name] = tokenConverters[i];
+};
+
 Gel.Token = Token;
 Gel.Scope = Scope;
 module.exports = Gel;
