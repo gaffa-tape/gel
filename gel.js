@@ -506,6 +506,13 @@ SourcePathInfo.prototype.setSubPaths = function(paths){
     }
     this.subPaths = paths;
 };
+SourcePathInfo.prototype.mapSubPaths = function(object){
+    for(var key in object){
+        if(object.hasOwnProperty(key)){
+            this.setSubPath(key, key);
+        }
+    }
+};
 SourcePathInfo.prototype.drillTo = function(key){
     if(this.subPaths){
         this.path = this.subPaths[key];
@@ -960,9 +967,16 @@ var tokenConverters = [
 
             sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
 
-            var result = source.slice(start, end);
+            if(sourcePathInfo.path){
+                if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
+                    sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
+                }else{
+                    sourcePathInfo.mapSubPaths(source);
+                    sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                }
+            }
 
-            sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths && sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
+            var result = source.slice(start, end);
 
             args.callee.sourcePathInfo = sourcePathInfo;
 
