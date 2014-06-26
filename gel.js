@@ -450,7 +450,7 @@ function TupleToken(){}
 TupleToken = createSpec(TupleToken, Token);
 TupleToken.prototype.name = 'TupleToken';
 TupleToken.tokenPrecedence = 2;
-TupleToken.prototype.parsePrecedence = 5;
+TupleToken.prototype.parsePrecedence = 6;
 TupleToken.tokenise = function(substring){
     var tupleConst = ":";
     return (substring.charAt(0) === tupleConst) ? new TupleToken(tupleConst, 1) : undefined;
