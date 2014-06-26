@@ -988,16 +988,20 @@ var tokenConverters = [
         },
         "last":function(scope, args){
             var source = args.next(),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source);
-
-            sourcePathInfo.drillTo(source.length - 1);
-
-            args.callee.sourcePathInfo = sourcePathInfo;
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source),
+                lastIndex;
 
             if(!Array.isArray(source)){
                 return;
             }
-            return source[source.length - 1];
+
+            lastIndex = Math.max(0, source.length - 1);
+
+            sourcePathInfo.drillTo(lastIndex);
+
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return source[lastIndex];
         },
         "first":function(scope, args){
             var source = args.next(),
