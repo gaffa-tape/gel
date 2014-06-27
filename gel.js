@@ -962,17 +962,20 @@ var tokenConverters = [
                 return;
             }
 
-            // clone source
-            source = source.slice();
+            if(typeof source !== 'string'){
 
-            sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+                // clone source
+                source = source.slice();
 
-            if(sourcePathInfo.path){
-                if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
-                    sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
-                }else{
-                    sourcePathInfo.mapSubPaths(source);
-                    sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+
+                if(sourcePathInfo.path){
+                    if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
+                        sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
+                    }else{
+                        sourcePathInfo.mapSubPaths(source);
+                        sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                    }
                 }
             }
 
