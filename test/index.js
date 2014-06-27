@@ -695,6 +695,11 @@ test('{"thing":5}.thing', function (t) {
   t.equal(gel.evaluate(t.name, context), 5);
   t.end();
 });
+test('{"stuff":{"thing":5}.thing}', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), {stuff:5});
+  t.end();
+});
 test('{"thing":1}', function (t) {
   t.plan(1);
   var tokens = gel.evaluate(t.name, context, true);

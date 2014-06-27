@@ -450,7 +450,7 @@ function TupleToken(){}
 TupleToken = createSpec(TupleToken, Token);
 TupleToken.prototype.name = 'TupleToken';
 TupleToken.tokenPrecedence = 2;
-TupleToken.prototype.parsePrecedence = 5;
+TupleToken.prototype.parsePrecedence = 6;
 TupleToken.tokenise = function(substring){
     var tupleConst = ":";
     return (substring.charAt(0) === tupleConst) ? new TupleToken(tupleConst, 1) : undefined;
@@ -991,16 +991,20 @@ var tokenConverters = [
         },
         "last":function(scope, args){
             var source = args.next(),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source);
-
-            sourcePathInfo.drillTo(source.length - 1);
-
-            args.callee.sourcePathInfo = sourcePathInfo;
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source),
+                lastIndex;
 
             if(!Array.isArray(source)){
                 return;
             }
-            return source[source.length - 1];
+
+            lastIndex = Math.max(0, source.length - 1);
+
+            sourcePathInfo.drillTo(lastIndex);
+
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return source[lastIndex];
         },
         "first":function(scope, args){
             var source = args.next(),
