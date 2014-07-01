@@ -184,11 +184,22 @@ NumberToken.prototype.evaluate = function(scope){
     this.result = parseFloat(this.original);
 };
 
-function ValueToken(value, path, key){
+function ValueToken(value, sourcePathInfo, key){
     this.result = value;
-    this.sourcePathInfo = new SourcePathInfo();
-    this.sourcePathInfo.path = path;
-    this.sourcePathInfo.drillTo(key);
+
+    if(sourcePathInfo){
+        this.sourcePathInfo = new SourcePathInfo();
+        this.sourcePathInfo.path = sourcePathInfo.path;
+        this.sourcePathInfo.subPaths = sourcePathInfo.subPaths && sourcePathInfo.subPaths.slice();
+    }
+
+    if(key != null){
+        if(this.sourcePathInfo.subPaths){
+            this.sourcePathInfo.path = this.sourcePathInfo.subPaths[key];
+        }else{
+            this.sourcePathInfo.drillTo(key);
+        }
+    }
 }
 ValueToken = createSpec(ValueToken, Token);
 ValueToken.tokenPrecedence = 2;
@@ -906,13 +917,16 @@ var tokenConverters = [
 
             var addPaths = function(){
                 if(sourcePaths){
-                    var argToken = args.getRaw(argCount++),
+                    var argToken = args.getRaw(argCount++, true),
                         argSourcePathInfo = argToken && argToken.sourcePathInfo;
 
                     if(argSourcePathInfo){
                         if(Array.isArray(argSourcePathInfo.subPaths)){
                         sourcePaths = sourcePaths.concat(argSourcePathInfo.subPaths);
                         }else{
+                            if(!argToken.result){
+                                return;
+                            }
                             for(var i = 0; i < argToken.result.length; i++){
                                 sourcePaths.push(paths.append(argSourcePathInfo.path, paths.create(i)));
                             }
@@ -1195,7 +1209,9 @@ var tokenConverters = [
             if(isArray){
                 fastEach(source, function(item, index){
                     var callee = {};
-                    result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
+                    result[index] = scope.callWith(functionToken, [
+                        new ValueToken(item, sourcePathInfo, index)
+                    ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
                     }
@@ -1203,7 +1219,9 @@ var tokenConverters = [
             }else{
                 for(var key in source){
                     var callee = {};
-                    result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
+                    result[key] = scope.callWith(functionToken, [
+                        new ValueToken(source[key], sourcePathInfo, key)
+                    ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
                     }
@@ -1215,26 +1233,34 @@ var tokenConverters = [
             return result;
         },
         "fold": function(scope, args){
-            var argValues = args.all(),
-                fn = argValues.pop(),
-                seed = argValues.pop(),
-                source = argValues[0],
-                result = seed,
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true);
+            var fn = args.get(2),
+                seed = args.get(1),
+                sourceToken = args.getRaw(0, true),
+                source = sourceToken.result,
+                result = seed;
 
-            if(argValues.length > 1){
-                source = argValues;
-            }
+            var sourcePathInfo = new SourcePathInfo(sourceToken, source, true);
+            sourcePathInfo.mapSubPaths(source);
 
             if(!source || !source.length){
                 return result;
             }
 
+            var callee = {};
             for(var i = 0; i < source.length; i++){
-                var callee = {};
-                result = scope.callWith(fn, [result, source[i]], callee);
+                var lastSourcePathInfo = callee.sourcePathInfo;
+                callee = {};
+                result = scope.callWith(
+                    fn,
+                    [
+                        new ValueToken(result, lastSourcePathInfo),
+                        new ValueToken(source[i], sourcePathInfo, i)
+                    ],
+                    callee
+                );
+
                 if(callee.sourcePathInfo && callee.sourcePathInfo.subPaths){
-                    sourcePathInfo.subPaths[i] = callee.sourcePathInfo.subPaths[i];
+                    sourcePathInfo.subPaths = callee.sourcePathInfo.subPaths;
                 }
             }
 
