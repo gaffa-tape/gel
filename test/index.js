@@ -3,8 +3,6 @@ var test = require('tape'),
     gel = new Gel(),
     createSpec = require('spec-js');
 
-
-
 // Add a custom gel function
 gel.scope["demoFunc"] = function() {
     return 123456;
@@ -61,7 +59,7 @@ test('"a"', function (t) {
 test("'''", function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate("'''");
+    gel.evaluate("'''");
   });
   t.end();
 });
@@ -591,7 +589,7 @@ test('(max 1 5 3 4 2)', function (t) {
 test('()', function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate('()');
+    gel.evaluate('()');
   }, "undefined is not a function");
   t.end();
 });
@@ -706,6 +704,11 @@ test('{"thing":1}', function (t) {
   t.ok(tokens[0].sourcePathInfo);
   t.end();
 });
+test('{}', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), {});
+  t.end();
+});
 test('(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )', function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate(t.name, context), [2,2]);
@@ -719,7 +722,7 @@ test('(demoFunc)', function (t) {
 test('description', function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate("(demoFunc")
+  gel.evaluate("(demoFunc")
   }, "error");
   t.end();
 });
@@ -941,5 +944,27 @@ test('(math.sqrt 1234)', function (t) {
         gel.evaluate(t.name, context),
         35.12833614050059
     );
+    t.end();
+});
+test('1,2,3', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [1,2,3]
+    );
+    t.end();
+});
+test('1,2,', function (t) {
+    t.plan(1);
+    t.throws(function(){
+        gel.evaluate(t.name, context);
+    });
+    t.end();
+});
+test(',2,3', function (t) {
+    t.plan(1);
+    t.throws(function(){
+        gel.evaluate(t.name, context);
+    });
     t.end();
 });
