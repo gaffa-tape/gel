@@ -186,6 +186,7 @@ NumberToken.prototype.evaluate = function(scope){
 
 function ValueToken(value, sourcePathInfo, key){
     this.original = 'Value';
+    this.length = this.original.length,
     this.result = value;
 
     if(sourcePathInfo){
@@ -195,11 +196,7 @@ function ValueToken(value, sourcePathInfo, key){
     }
 
     if(key != null){
-        if(this.sourcePathInfo.subPaths){
-            this.sourcePathInfo.path = this.sourcePathInfo.subPaths[key];
-        }else{
-            this.sourcePathInfo.drillTo(key);
-        }
+        this.sourcePathInfo.drillTo(key);
     }
 }
 ValueToken = createSpec(ValueToken, Token);
@@ -576,8 +573,7 @@ SourcePathInfo.prototype.mapSubPaths = function(object){
 SourcePathInfo.prototype.drillTo = function(key){
     if(this.subPaths){
         this.path = this.subPaths[key];
-    }
-    if(this.path){
+    }else if(this.path){
         this.path = paths.append(this.path, paths.create(key));
     }
 };
@@ -1265,7 +1261,7 @@ var tokenConverters = [
                 fastEach(source, function(item, index){
                     var callee = {};
                     result[index] = scope.callWith(functionToken, [
-                        new ValueToken(item, sourcePathInfo, index)
+                        new ValueToken(item, new SourcePathInfo(args.getRaw(0), source), index)
                     ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
@@ -1275,7 +1271,7 @@ var tokenConverters = [
                 for(var key in source){
                     var callee = {};
                     result[key] = scope.callWith(functionToken, [
-                        new ValueToken(source[key], sourcePathInfo, key)
+                        new ValueToken(source[key], new SourcePathInfo(args.getRaw(0), source), key)
                     ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
