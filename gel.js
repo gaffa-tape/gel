@@ -687,6 +687,9 @@ var tokenConverters = [
         "*":function(scope, args){
             return args.next() * args.next();
         },
+        "%":function(scope, args){
+            return args.next() % args.next();
+        },
         "isNaN":function(scope, args){
             return isNaN(args.get(0));
         },

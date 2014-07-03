@@ -188,6 +188,16 @@ test('(- 1 2 8)', function (t) {
   t.equal(gel.evaluate(t.name, context), -1);
   t.end();
 });
+test('(* 4 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 8);
+  t.end();
+});
+test('(* 0 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
 test('(/ 4 2)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 2);
@@ -196,6 +206,16 @@ test('(/ 4 2)', function (t) {
 test('(/ 0 2)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
+test('(% 4 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
+test('(% 5 3)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 2);
   t.end();
 });
 test('(== (/ 2 0) Infinity)', function (t) {
@@ -966,5 +986,13 @@ test(',2,3', function (t) {
     t.throws(function(){
         gel.evaluate(t.name, context);
     });
+    t.end();
+});
+test('1,2,{"a":"b"}.a', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [1,2,'b']
+    );
     t.end();
 });
