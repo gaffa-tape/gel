@@ -72,6 +72,7 @@ StringToken.tokenPrecedence = 2;
 StringToken.prototype.parsePrecedence = 2;
 StringToken.prototype.stringTerminal = '"';
 StringToken.prototype.name = 'StringToken';
+StringToken.prototype.static = true;
 StringToken.tokenise = function (substring) {
     if (substring.charAt(0) === this.prototype.stringTerminal) {
         var index = 0,
@@ -780,14 +781,19 @@ var tokenConverters = [
             return nextArg;
         },
         "&&":function(scope, args){
-            var nextArg;
+            var nextArg,
+                rawResult,
+                argIndex = -1;
+
             while(args.hasNext()){
+                argIndex++;
                 nextArg = args.next();
                 if(!nextArg){
                     break;
                 }
             }
-            var rawResult = args.getRaw(args.length-1);
+
+            rawResult = args.getRaw(argIndex);
             args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
