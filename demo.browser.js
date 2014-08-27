@@ -5,8 +5,12 @@ var Gel = require('./'),
     input,
     context,
     output,
+    fns,
     ui = crel('div',
         crel('h1', 'Gel tester (shift+enter to run)'),
+        fns = crel('div', {'class':'functions'},
+            crel('h2', 'Functions')
+        ),
         crel('div', {'class':'halfWidth'},
             crel('h2', 'Input (Gel)'),
             input = crel('textarea')
@@ -18,6 +22,12 @@ var Gel = require('./'),
         crel('h2', 'Output'),
         output = crel('pre')
     );
+
+Object.keys(gel.scope).map(function(fnName){
+    crel(fns,
+        crel('div', fnName)
+    );
+});
 
 window.gel = gel;
 
@@ -159,42 +169,26 @@ ParenthesesToken.tokenise = function(substring) {
         return new ParenthesesToken(substring.charAt(0), 1);
     }
 }
-ParenthesesToken.prototype.parse = createNestingParser(ParenthesesEndToken);
+var parenthesisParser = createNestingParser(ParenthesesEndToken);
+ParenthesesToken.prototype.parse = function(tokens, index, parse){
+    parenthesisParser.apply(this, arguments);
+
+    this.hasFill = this.childTokens._hasFill;
+    this.partials = this.childTokens._partials;
+};
 
 function executeFunction(parenthesesToken, scope, fn){
-    var outerArgs = parenthesesToken.childTokens.slice(1),
-        hasPartial,
-        hasFill;
+    var outerArgs = parenthesesToken.childTokens.slice(1);
 
-    for(var i = 0; i < parenthesesToken.childTokens.length; i++){
-        var childToken = parenthesesToken.childTokens[i];
-        if(childToken instanceof FillToken){
-            if(hasFill){
-                throw "Only one fill token can be used in a function call"
-            }
-            hasFill = true;
-        }else if(childToken instanceof PartialToken){
-            if(hasFill){
-                throw "Partial tokens may only appear befor a Fill token"
-            }
-            hasPartial = true;
-        }
-    }
-
-    if(hasPartial || hasFill){
+    if(parenthesesToken.partials || parenthesesToken.hasFill){
         parenthesesToken.result = function(scope, args){
-            var argIndex = 0,
-                appliedArgs = [];
+            scope._innerArgs = args;
+
+            var appliedArgs = [];
 
             for(var i = 0; i < outerArgs.length; i++){
                 if(outerArgs[i] instanceof FillToken){
-                    while(argIndex<args.length){
-                        appliedArgs.push(args.getRaw(argIndex));
-                        argIndex++;
-                    }
-                }else if(outerArgs[i] instanceof PartialToken){
-                    appliedArgs.push(args.getRaw(argIndex));
-                    argIndex++;
+                    appliedArgs.push.apply(appliedArgs, args.sliceRaw(parenthesesToken.partials));
                 }else{
                     appliedArgs.push(outerArgs[i]);
                 }
@@ -464,23 +458,41 @@ function PartialToken(){}
 PartialToken = createSpec(PartialToken, Token);
 PartialToken.prototype.name = 'PartialToken';
 PartialToken.tokenPrecedence = 1;
-PartialToken.prototype.parsePrecedence = 6;
+PartialToken.prototype.parsePrecedence = 4;
 PartialToken.tokenise = function(substring){
     var characterConst = "_";
     return (substring.charAt(0) === characterConst) ? new PartialToken(characterConst, 1) : undefined;
 };
-PartialToken.prototype.evaluate = function(){};
+PartialToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "Partial tokens may only appear before a Fill token";
+    }
+    tokens._partials = tokens._partials || 0;
+    this._partialIndex = tokens._partials;
+    tokens._partials++;
+};
+PartialToken.prototype.evaluate = function(scope){
+    this.result = scope._innerArgs.get(this._partialIndex);
+};
 
 function FillToken(){}
 FillToken = createSpec(FillToken, Token);
 FillToken.prototype.name = 'FillToken';
 FillToken.tokenPrecedence = 1;
-FillToken.prototype.parsePrecedence = 6;
+FillToken.prototype.parsePrecedence = 4;
 FillToken.tokenise = function(substring){
     var charactersConst = "...";
     return (substring.slice(0,3) === charactersConst) ? new FillToken(charactersConst, 3) : undefined;
 };
-FillToken.prototype.evaluate = function(){};
+FillToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "A function call may only have one fill token"
+    };
+    tokens._hasFill = true;
+};
+FillToken.prototype.evaluate = function(){
+    this.result = scope._innerArgs.rest();
+};
 
 function PipeToken(){}
 PipeToken = createSpec(PipeToken, Token);
@@ -2093,13 +2105,50 @@ function callWith(fn, fnArguments, calledToken){
                 return fnArguments[argIndex++];
             },
             all: function(){
+                var allArgs = fnArguments.slice();
+                for(var i = 0; i < allArgs.length; i++){
+                    if(allArgs[i] instanceof Token){
+                        allArgs[i].evaluate(scope)
+                        allArgs[i] = allArgs[i].result;
+                    }
+                }
+                return allArgs;
+            },
+            rest: function(){
                 var allArgs = [];
                 while(this.hasNext()){
                     allArgs.push(this.next());
                 }
                 return allArgs;
+            },
+            restRaw: function(evaluated){
+                var rawArgs = fnArguments.slice();
+                if(evaluated){
+                    for(var i = argIndex; i < rawArgs.length; i++){
+                        if(rawArgs[i] instanceof Token){
+                            rawArgs[i].evaluate(scope);
+                        }
+                    }
+                }
+                return rawArgs;
+            },
+            slice: function(start, end){
+                return this.all().slice(start, end);
+            },
+            sliceRaw: function(start, end, evaluated){
+                var rawArgs = fnArguments.slice(start, end);
+                if(evaluated){
+                    fastEach(rawArgs, function(arg){
+                        if(arg instanceof Token){
+                            arg.evaluate(scope);
+                        }
+                    });
+                }
+                return rawArgs;
             }
         };
+
+    scope._args = args;
 
     return fn(scope, args);
 }

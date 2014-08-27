@@ -1041,11 +1041,11 @@ test('2,3 ~> (+ _ _)', function (t) {
     );
     t.end();
 });
-test('1,2,3,4,5 ~> (join " " _ "and a" _ "and a" ...)', function (t) {
+test('1,2,1,2,3,"GO" ~> (join " " "a" _ "and a" _ "and a" ...)', function (t) {
     t.plan(1);
     t.equal(
         gel.evaluate(t.name, context),
-        "1 and a 2 and a 3 4 5"
+        "a 1 and a 2 and a 1 2 3 GO"
     );
     t.end();
 });
@@ -1062,6 +1062,14 @@ test('(fold 1,2,3 0 +)', function (t) {
     t.equal(
         gel.evaluate(t.name, context),
         6
+    );
+    t.end();
+});
+test('{"a":1},{"a":2},{"a":3} |> (map _ (* 2 _.a))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [2,4,6]
     );
     t.end();
 });
