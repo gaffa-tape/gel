@@ -803,6 +803,11 @@ test('(map anArray {item (length (join "" item "world "))})', function (t) {
   t.deepEqual(gel.evaluate(t.name, context), [7,7,7]);
   t.end();
 });
+test('(map null {item 1})', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), null);
+  t.end();
+});
 test('(pairs (object "hello" "world"))', function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate(t.name, context), [['hello','world']]);
@@ -867,6 +872,14 @@ test('(array 1 2 3) ~> (partial join " ")', function (t) {
     t.deepEqual(
         gel.evaluate(t.name, context),
         "1 2 3"
+    );
+    t.end();
+});
+test('123 ~> toString', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        null
     );
     t.end();
 });
@@ -993,6 +1006,62 @@ test('1,2,{"a":"b"}.a', function (t) {
     t.deepEqual(
         gel.evaluate(t.name, context),
         [1,2,'b']
+    );
+    t.end();
+});
+test('1,2,3 ~> (join " " ...)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+       "1 2 3"
+    );
+    t.end();
+});
+test('2 |> (+ 1 _)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('2 |> (+ _ 1)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('2,3 ~> (+ _ _)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        5
+    );
+    t.end();
+});
+test('1,2,3,4,5 ~> (join " " _ "and a" _ "and a" ...)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        "1 and a 2 and a 3 4 5"
+    );
+    t.end();
+});
+test('1,2,3 |> (fold _ 0 +)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        6
+    );
+    t.end();
+});
+test('(fold 1,2,3 0 +)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        6
     );
     t.end();
 });

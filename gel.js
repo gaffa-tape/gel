@@ -119,6 +119,52 @@ ParenthesesToken.tokenise = function(substring) {
     }
 }
 ParenthesesToken.prototype.parse = createNestingParser(ParenthesesEndToken);
+
+function executeFunction(parenthesesToken, scope, fn){
+    var outerArgs = parenthesesToken.childTokens.slice(1),
+        hasPartial,
+        hasFill;
+
+    for(var i = 0; i < parenthesesToken.childTokens.length; i++){
+        var childToken = parenthesesToken.childTokens[i];
+        if(childToken instanceof FillToken){
+            if(hasFill){
+                throw "Only one fill token can be used in a function call"
+            }
+            hasFill = true;
+        }else if(childToken instanceof PartialToken){
+            if(hasFill){
+                throw "Partial tokens may only appear befor a Fill token"
+            }
+            hasPartial = true;
+        }
+    }
+
+    if(hasPartial || hasFill){
+        parenthesesToken.result = function(scope, args){
+            var argIndex = 0,
+                appliedArgs = [];
+
+            for(var i = 0; i < outerArgs.length; i++){
+                if(outerArgs[i] instanceof FillToken){
+                    while(argIndex<args.length){
+                        appliedArgs.push(args.getRaw(argIndex));
+                        argIndex++;
+                    }
+                }else if(outerArgs[i] instanceof PartialToken){
+                    appliedArgs.push(args.getRaw(argIndex));
+                    argIndex++;
+                }else{
+                    appliedArgs.push(outerArgs[i]);
+                }
+            }
+
+            return scope.callWith(fn, appliedArgs, parenthesesToken);
+        };
+        return;
+    }
+    parenthesesToken.result = scope.callWith(fn, parenthesesToken.childTokens.slice(1), parenthesesToken);
+}
 ParenthesesToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
@@ -134,7 +180,7 @@ ParenthesesToken.prototype.evaluate = function(scope){
         throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
     }
 
-    this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
+    executeFunction(this, scope, functionToken.result);
 };
 
 function ParenthesesEndToken(){}
@@ -373,6 +419,28 @@ CommaToken.prototype.evaluate = function(scope){
     this.sourcePathInfo.subPaths.push(rightPath);
 };
 
+function PartialToken(){}
+PartialToken = createSpec(PartialToken, Token);
+PartialToken.prototype.name = 'PartialToken';
+PartialToken.tokenPrecedence = 1;
+PartialToken.prototype.parsePrecedence = 6;
+PartialToken.tokenise = function(substring){
+    var characterConst = "_";
+    return (substring.charAt(0) === characterConst) ? new PartialToken(characterConst, 1) : undefined;
+};
+PartialToken.prototype.evaluate = function(){};
+
+function FillToken(){}
+FillToken = createSpec(FillToken, Token);
+FillToken.prototype.name = 'FillToken';
+FillToken.tokenPrecedence = 1;
+FillToken.prototype.parsePrecedence = 6;
+FillToken.tokenise = function(substring){
+    var charactersConst = "...";
+    return (substring.slice(0,3) === charactersConst) ? new FillToken(charactersConst, 3) : undefined;
+};
+FillToken.prototype.evaluate = function(){};
+
 function PipeToken(){}
 PipeToken = createSpec(PipeToken, Token);
 PipeToken.prototype.name = 'PipeToken';
@@ -431,6 +499,11 @@ PipeApplyToken.prototype.evaluate = function(scope){
 
     if(typeof this.functionToken.result !== 'function'){
         throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
+    }
+
+    if(!Array.isArray(this.argumentsToken.result)){
+        this.result = null;
+        return;
     }
 
     this.result = scope.callWith(this.functionToken.result, this.argumentsToken.result, this);
@@ -646,6 +719,8 @@ var tokenConverters = [
         IdentifierToken,
         CommaToken,
         PeriodToken,
+        PartialToken,
+        FillToken,
         PipeToken,
         PipeApplyToken,
         BraceToken,
@@ -1260,6 +1335,7 @@ var tokenConverters = [
             var source = args.next(),
                 sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
                 isArray = Array.isArray(source),
+                isObject = typeof source === 'object' && source !== null,
                 result = isArray ? [] : {},
                 functionToken = args.next();
 
@@ -1273,7 +1349,7 @@ var tokenConverters = [
                         sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
                     }
                 });
-            }else{
+            }else if(isObject){
                 for(var key in source){
                     var callee = {};
                     result[key] = scope.callWith(functionToken, [
@@ -1283,6 +1359,8 @@ var tokenConverters = [
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
                     }
                 }
+            }else{
+                return null;
             }
 
             args.callee.sourcePathInfo = sourcePathInfo;
@@ -1292,10 +1370,11 @@ var tokenConverters = [
         "fold": function(scope, args){
             var fn = args.get(2),
                 seedToken = args.getRaw(1, true),
-                seed = seedToken.result,
+                seed = args.get(1),
                 sourceToken = args.getRaw(0, true),
-                source = sourceToken.result,
+                source = args.get(0),
                 result = seed;
+
 
             var sourcePathInfo = new SourcePathInfo(sourceToken, source, true);
             sourcePathInfo.mapSubPaths(source);

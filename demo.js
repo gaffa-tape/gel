@@ -1,4 +1,4 @@
-var Gel = require('./gel'),
+var Gel = require('./'),
 	gel = new Gel(),
 	crel = require('crel'),
     input,

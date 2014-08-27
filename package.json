@@ -41,7 +41,8 @@
     "crel": "^1.1.2"
   },
   "scripts": {
-    "test": "node test"
+    "test": "node test",
+    "build": "browserify demo.js > demo.browser.js"
   },
   "testling": {
     "files": "test/*.js",
