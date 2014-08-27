@@ -457,8 +457,6 @@ PipeToken.prototype.parse = function(tokens, position){
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeToken.prototype.evaluate = function(scope){
-    scope = new Scope(scope);
-
     if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
@@ -486,8 +484,6 @@ PipeApplyToken.prototype.parse = function(tokens, position){
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeApplyToken.prototype.evaluate = function(scope){
-    scope = new Scope(scope);
-
     if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }

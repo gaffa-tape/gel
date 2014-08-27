@@ -1073,3 +1073,11 @@ test('{"a":1},{"a":2},{"a":3} |> (map _ (* 2 _.a))', function (t) {
     );
     t.end();
 });
+test('(fold "1","2",3 0 (+ _ _|>parseInt))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        6
+    );
+    t.end();
+});
