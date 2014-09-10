@@ -698,7 +698,7 @@ function gelMerge(scope, args){
     var result = {};
     while(args.hasNext()){
         var nextObject = args.next();
-        result = merge(result, nextObject);
+        result = merge.recursive(result, nextObject);
     }
     return result;
 }
