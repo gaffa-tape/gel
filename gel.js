@@ -1,6 +1,6 @@
 var Lang = require('lang-js'),
     paths = require('gedi-paths'),
-    merge = require('merge'),
+    merge = require('clean-merge'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,
