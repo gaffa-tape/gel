@@ -1,11 +1,15 @@
-var Gel = require('./gel'),
+var Gel = require('./'),
 	gel = new Gel(),
 	crel = require('crel'),
     input,
     context,
     output,
+    fns,
     ui = crel('div',
         crel('h1', 'Gel tester (shift+enter to run)'),
+        fns = crel('div', {'class':'functions'},
+            crel('h2', 'Functions')
+        ),
         crel('div', {'class':'halfWidth'},
             crel('h2', 'Input (Gel)'),
             input = crel('textarea')
@@ -17,6 +21,12 @@ var Gel = require('./gel'),
         crel('h2', 'Output'),
         output = crel('pre')
     );
+
+Object.keys(gel.scope).map(function(fnName){
+    crel(fns,
+        crel('div', fnName)
+    );
+});
 
 window.gel = gel;
 

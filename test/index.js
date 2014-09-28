@@ -3,8 +3,6 @@ var test = require('tape'),
     gel = new Gel(),
     createSpec = require('spec-js');
 
-
-
 // Add a custom gel function
 gel.scope["demoFunc"] = function() {
     return 123456;
@@ -61,7 +59,7 @@ test('"a"', function (t) {
 test("'''", function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate("'''");
+    gel.evaluate("'''");
   });
   t.end();
 });
@@ -190,6 +188,16 @@ test('(- 1 2 8)', function (t) {
   t.equal(gel.evaluate(t.name, context), -1);
   t.end();
 });
+test('(* 4 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 8);
+  t.end();
+});
+test('(* 0 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
 test('(/ 4 2)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 2);
@@ -198,6 +206,16 @@ test('(/ 4 2)', function (t) {
 test('(/ 0 2)', function (t) {
   t.plan(1);
   t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
+test('(% 4 2)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 0);
+  t.end();
+});
+test('(% 5 3)', function (t) {
+  t.plan(1);
+  t.equal(gel.evaluate(t.name, context), 2);
   t.end();
 });
 test('(== (/ 2 0) Infinity)', function (t) {
@@ -591,7 +609,7 @@ test('(max 1 5 3 4 2)', function (t) {
 test('()', function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate('()');
+    gel.evaluate('()');
   }, "undefined is not a function");
   t.end();
 });
@@ -706,6 +724,11 @@ test('{"thing":1}', function (t) {
   t.ok(tokens[0].sourcePathInfo);
   t.end();
 });
+test('{}', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), {});
+  t.end();
+});
 test('(filter (array 1 2 3 4 5 4 3 2 1)  {item (= item 2)} )', function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate(t.name, context), [2,2]);
@@ -719,7 +742,7 @@ test('(demoFunc)', function (t) {
 test('description', function (t) {
   t.plan(1);
   t.throws(function(){
-	gel.evaluate("(demoFunc")
+  gel.evaluate("(demoFunc")
   }, "error");
   t.end();
 });
@@ -778,6 +801,11 @@ test('(map anArray {item (length (join "" "world " item))})', function (t) {
 test('(map anArray {item (length (join "" item "world "))})', function (t) {
   t.plan(1);
   t.deepEqual(gel.evaluate(t.name, context), [7,7,7]);
+  t.end();
+});
+test('(map null {item 1})', function (t) {
+  t.plan(1);
+  t.deepEqual(gel.evaluate(t.name, context), null);
   t.end();
 });
 test('(pairs (object "hello" "world"))', function (t) {
@@ -844,6 +872,14 @@ test('(array 1 2 3) ~> (partial join " ")', function (t) {
     t.deepEqual(
         gel.evaluate(t.name, context),
         "1 2 3"
+    );
+    t.end();
+});
+test('123 ~> toString', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        null
     );
     t.end();
 });
@@ -942,4 +978,113 @@ test('(math.sqrt 1234)', function (t) {
         35.12833614050059
     );
     t.end();
+});
+test('1,2,3', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [1,2,3]
+    );
+    t.end();
+});
+test('1,2,', function (t) {
+    t.plan(1);
+    t.throws(function(){
+        gel.evaluate(t.name, context);
+    });
+    t.end();
+});
+test(',2,3', function (t) {
+    t.plan(1);
+    t.throws(function(){
+        gel.evaluate(t.name, context);
+    });
+    t.end();
+});
+test('1,2,{"a":"b"}.a', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [1,2,'b']
+    );
+    t.end();
+});
+test('1,2,3 ~> (join " " ...)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+       "1 2 3"
+    );
+    t.end();
+});
+test('2 |> (+ 1 _)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('2 |> (+ _ 1)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('2,3 ~> (+ _ _)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        5
+    );
+    t.end();
+});
+test('1,2,1,2,3,"GO" ~> (join " " "a" _ "and a" _ "and a" ...)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        "a 1 and a 2 and a 1 2 3 GO"
+    );
+    t.end();
+});
+test('1,2,3 |> (fold _ 0 +)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        6
+    );
+    t.end();
+});
+test('(fold 1,2,3 0 +)', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        6
+    );
+    t.end();
+});
+test('{"a":1},{"a":2},{"a":3} |> (map _ (* 2 _.a))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        [2,4,6]
+    );
+    t.end();
+});
+test('(fold "1","2",3 0 (+ _ _|>parseInt))', function (t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        6
+    );
+    t.end();
+});
+test('(merge {"x":{"y":3.5}} {"x":{"wing":"meh"} "y":{"s":"club7"}})', function(t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        {"x":{"y":3.5,"wing":"meh"},"y":{"s":"club7"}}
+    );
 });

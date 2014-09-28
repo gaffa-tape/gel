@@ -72,6 +72,7 @@ StringToken.tokenPrecedence = 2;
 StringToken.prototype.parsePrecedence = 2;
 StringToken.prototype.stringTerminal = '"';
 StringToken.prototype.name = 'StringToken';
+StringToken.prototype.static = true;
 StringToken.tokenise = function (substring) {
     if (substring.charAt(0) === this.prototype.stringTerminal) {
         var index = 0,
@@ -117,7 +118,37 @@ ParenthesesToken.tokenise = function(substring) {
         return new ParenthesesToken(substring.charAt(0), 1);
     }
 }
-ParenthesesToken.prototype.parse = createNestingParser(ParenthesesEndToken);
+var parenthesisParser = createNestingParser(ParenthesesEndToken);
+ParenthesesToken.prototype.parse = function(tokens, index, parse){
+    parenthesisParser.apply(this, arguments);
+
+    this.hasFill = this.childTokens._hasFill;
+    this.partials = this.childTokens._partials;
+};
+
+function executeFunction(parenthesesToken, scope, fn){
+    var outerArgs = parenthesesToken.childTokens.slice(1);
+
+    if(parenthesesToken.partials || parenthesesToken.hasFill){
+        parenthesesToken.result = function(scope, args){
+            scope._innerArgs = args;
+
+            var appliedArgs = [];
+
+            for(var i = 0; i < outerArgs.length; i++){
+                if(outerArgs[i] instanceof FillToken){
+                    appliedArgs.push.apply(appliedArgs, args.sliceRaw(parenthesesToken.partials));
+                }else{
+                    appliedArgs.push(outerArgs[i]);
+                }
+            }
+
+            return scope.callWith(fn, appliedArgs, parenthesesToken);
+        };
+        return;
+    }
+    parenthesesToken.result = scope.callWith(fn, parenthesesToken.childTokens.slice(1), parenthesesToken);
+}
 ParenthesesToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
@@ -133,7 +164,7 @@ ParenthesesToken.prototype.evaluate = function(scope){
         throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
     }
 
-    this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
+    executeFunction(this, scope, functionToken.result);
 };
 
 function ParenthesesEndToken(){}
@@ -184,11 +215,20 @@ NumberToken.prototype.evaluate = function(scope){
     this.result = parseFloat(this.original);
 };
 
-function ValueToken(value, path, key){
+function ValueToken(value, sourcePathInfo, key){
+    this.original = 'Value';
+    this.length = this.original.length,
     this.result = value;
-    this.sourcePathInfo = new SourcePathInfo();
-    this.sourcePathInfo.path = path;
-    this.sourcePathInfo.drillTo(key);
+
+    if(sourcePathInfo){
+        this.sourcePathInfo = new SourcePathInfo();
+        this.sourcePathInfo.path = sourcePathInfo.path;
+        this.sourcePathInfo.subPaths = sourcePathInfo.subPaths && sourcePathInfo.subPaths.slice();
+    }
+
+    if(key != null){
+        this.sourcePathInfo.drillTo(key);
+    }
 }
 ValueToken = createSpec(ValueToken, Token);
 ValueToken.tokenPrecedence = 2;
@@ -243,7 +283,7 @@ DelimiterToken.prototype.parsePrecedence = 1;
 DelimiterToken.prototype.name = 'DelimiterToken';
 DelimiterToken.tokenise = function(substring) {
     var i = 0;
-    while(i < substring.length && substring.charAt(i).trim() === "" || substring.charAt(i) === ',') {
+    while(i < substring.length && substring.charAt(i).trim() === "") {
         i++;
     }
 
@@ -315,6 +355,94 @@ PeriodToken.prototype.evaluate = function(scope){
     }
 };
 
+function CommaToken(){}
+CommaToken = createSpec(CommaToken, Token);
+CommaToken.prototype.name = 'CommaToken';
+CommaToken.tokenPrecedence = 2;
+CommaToken.prototype.parsePrecedence = 6;
+CommaToken.tokenise = function(substring){
+    var characterConst = ",";
+    return (substring.charAt(0) === characterConst) ? new CommaToken(characterConst, 1) : undefined;
+};
+CommaToken.prototype.parse = function(tokens, position){
+    this.leftToken = tokens.splice(position-1,1)[0];
+    this.rightToken = tokens.splice(position,1)[0];
+    if(!this.leftToken){
+        throw "Invalid syntax, expected token before ,";
+    }
+    if(!this.rightToken){
+        throw "Invalid syntax, expected token after ,";
+    }
+};
+CommaToken.prototype.evaluate = function(scope){
+    this.leftToken.evaluate(scope);
+    this.rightToken.evaluate(scope);
+
+    var leftToken = this.leftToken,
+        rightToken = this.rightToken,
+        leftPath = leftToken.sourcePathInfo && leftToken.sourcePathInfo.path,
+        leftPaths = leftToken.sourcePathInfo && leftToken.sourcePathInfo.subPaths,
+        rightPath = rightToken.sourcePathInfo && rightToken.sourcePathInfo.path;
+
+    this.sourcePathInfo = {
+        subPaths: []
+    };
+
+    if(leftToken instanceof CommaToken){
+        // concat
+        this.result = leftToken.result.slice();
+        this.sourcePathInfo.subPaths = leftPaths;
+    }else{
+        this.result = [];
+
+        this.result.push(leftToken.result);
+        this.sourcePathInfo.subPaths.push(leftPath);
+    }
+
+    this.result.push(rightToken.result);
+    this.sourcePathInfo.subPaths.push(rightPath);
+};
+
+function PartialToken(){}
+PartialToken = createSpec(PartialToken, Token);
+PartialToken.prototype.name = 'PartialToken';
+PartialToken.tokenPrecedence = 1;
+PartialToken.prototype.parsePrecedence = 4;
+PartialToken.tokenise = function(substring){
+    var characterConst = "_";
+    return (substring.charAt(0) === characterConst) ? new PartialToken(characterConst, 1) : undefined;
+};
+PartialToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "Partial tokens may only appear before a Fill token";
+    }
+    tokens._partials = tokens._partials || 0;
+    this._partialIndex = tokens._partials;
+    tokens._partials++;
+};
+PartialToken.prototype.evaluate = function(scope){
+    this.result = scope._innerArgs.get(this._partialIndex);
+};
+
+function FillToken(){}
+FillToken = createSpec(FillToken, Token);
+FillToken.prototype.name = 'FillToken';
+FillToken.tokenPrecedence = 1;
+FillToken.prototype.parsePrecedence = 4;
+FillToken.tokenise = function(substring){
+    var charactersConst = "...";
+    return (substring.slice(0,3) === charactersConst) ? new FillToken(charactersConst, 3) : undefined;
+};
+FillToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "A function call may only have one fill token"
+    };
+    tokens._hasFill = true;
+};
+FillToken.prototype.evaluate = function(){
+    this.result = scope._innerArgs.rest();
+};
+
 function PipeToken(){}
 PipeToken = createSpec(PipeToken, Token);
 PipeToken.prototype.name = 'PipeToken';
@@ -329,8 +457,6 @@ PipeToken.prototype.parse = function(tokens, position){
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeToken.prototype.evaluate = function(scope){
-    scope = new Scope(scope);
-
     if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
@@ -358,8 +484,6 @@ PipeApplyToken.prototype.parse = function(tokens, position){
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeApplyToken.prototype.evaluate = function(scope){
-    scope = new Scope(scope);
-
     if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
@@ -373,6 +497,11 @@ PipeApplyToken.prototype.evaluate = function(scope){
 
     if(typeof this.functionToken.result !== 'function'){
         throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
+    }
+
+    if(!Array.isArray(this.argumentsToken.result)){
+        this.result = null;
+        return;
     }
 
     this.result = scope.callWith(this.functionToken.result, this.argumentsToken.result, this);
@@ -393,7 +522,7 @@ BraceToken.prototype.evaluate = function(scope){
     var parameterNames = this.childTokens.slice();
 
     // Object literal
-    if(parameterNames[0] instanceof TupleToken){
+    if(parameterNames.length === 0 || parameterNames[0] instanceof TupleToken){
         this.result = {};
         this.sourcePathInfo = new SourcePathInfo(null, {}, true);
 
@@ -516,8 +645,7 @@ SourcePathInfo.prototype.mapSubPaths = function(object){
 SourcePathInfo.prototype.drillTo = function(key){
     if(this.subPaths){
         this.path = this.subPaths[key];
-    }
-    if(this.path){
+    }else if(this.path){
         this.path = paths.append(this.path, paths.create(key));
     }
 };
@@ -587,7 +715,10 @@ var tokenConverters = [
         FalseToken,
         DelimiterToken,
         IdentifierToken,
+        CommaToken,
         PeriodToken,
+        PartialToken,
+        FillToken,
         PipeToken,
         PipeApplyToken,
         BraceToken,
@@ -625,6 +756,9 @@ var tokenConverters = [
         },
         "*":function(scope, args){
             return args.next() * args.next();
+        },
+        "%":function(scope, args){
+            return args.next() % args.next();
         },
         "isNaN":function(scope, args){
             return isNaN(args.get(0));
@@ -720,14 +854,19 @@ var tokenConverters = [
             return nextArg;
         },
         "&&":function(scope, args){
-            var nextArg;
+            var nextArg,
+                rawResult,
+                argIndex = -1;
+
             while(args.hasNext()){
+                argIndex++;
                 nextArg = args.next();
                 if(!nextArg){
                     break;
                 }
             }
-            var rawResult = args.getRaw(args.length-1);
+
+            rawResult = args.getRaw(argIndex);
             args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
         },
@@ -899,37 +1038,42 @@ var tokenConverters = [
             }
         },
         "concat":function(scope, args){
-            var result = args.next(),
+            var result = [],
                 argCount = 0,
                 sourcePathInfo = new SourcePathInfo(),
-                sourcePaths = Array.isArray(result) && [];
+                sourcePaths = [];
 
-            var addPaths = function(){
-                if(sourcePaths){
-                    var argToken = args.getRaw(argCount++),
-                        argSourcePathInfo = argToken && argToken.sourcePathInfo;
+            var addPaths = function(argToken){
+                var argSourcePathInfo = argToken.sourcePathInfo;
 
-                    if(argSourcePathInfo){
-                        if(Array.isArray(argSourcePathInfo.subPaths)){
+                if(argSourcePathInfo){
+                    if(Array.isArray(argSourcePathInfo.subPaths)){
                         sourcePaths = sourcePaths.concat(argSourcePathInfo.subPaths);
-                        }else{
-                            for(var i = 0; i < argToken.result.length; i++){
-                                sourcePaths.push(paths.append(argSourcePathInfo.path, paths.create(i)));
-                            }
+                    }else if(argSourcePathInfo.path){
+                        for(var i = 0; i < argToken.result.length; i++){
+                            sourcePaths.push(paths.append(argSourcePathInfo.path, paths.create(i)));
                         }
                     }
+                }else{
+                    // Non-path-tracked array
+                    var nullPaths = [];
+                    for(var i = 0; i < argToken.result.length; i++) {
+                        nullPaths.push(null);
+                    };
+                    sourcePaths = sourcePaths.concat(nullPaths);
                 }
             };
 
-            addPaths();
-
-            while(args.hasNext()){
+            while(argCount < args.length){
                 if(result == null || !result.concat){
                     return undefined;
                 }
-                var next = args.next();
-                Array.isArray(next) && (result = result.concat(next));
-                addPaths();
+                var nextRaw = args.getRaw(argCount, true);
+                if(Array.isArray(nextRaw.result)){
+                    result = result.concat(nextRaw.result);
+                    addPaths(nextRaw);
+                }
+                argCount++;
             }
             sourcePathInfo.subPaths = sourcePaths;
             args.callee.sourcePathInfo = sourcePathInfo;
@@ -962,17 +1106,20 @@ var tokenConverters = [
                 return;
             }
 
-            // clone source
-            source = source.slice();
+            if(typeof source !== 'string'){
 
-            sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+                // clone source
+                source = source.slice();
 
-            if(sourcePathInfo.path){
-                if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
-                    sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
-                }else{
-                    sourcePathInfo.mapSubPaths(source);
-                    sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+
+                if(sourcePathInfo.path){
+                    if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
+                        sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
+                    }else{
+                        sourcePathInfo.mapSubPaths(source);
+                        sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                    }
                 }
             }
 
@@ -1186,25 +1333,32 @@ var tokenConverters = [
             var source = args.next(),
                 sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
                 isArray = Array.isArray(source),
+                isObject = typeof source === 'object' && source !== null,
                 result = isArray ? [] : {},
                 functionToken = args.next();
 
             if(isArray){
                 fastEach(source, function(item, index){
                     var callee = {};
-                    result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
+                    result[index] = scope.callWith(functionToken, [
+                        new ValueToken(item, new SourcePathInfo(args.getRaw(0), source), index)
+                    ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
                     }
                 });
-            }else{
+            }else if(isObject){
                 for(var key in source){
                     var callee = {};
-                    result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
+                    result[key] = scope.callWith(functionToken, [
+                        new ValueToken(source[key], new SourcePathInfo(args.getRaw(0), source), key)
+                    ], callee);
                     if(callee.sourcePathInfo){
                         sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
                     }
                 }
+            }else{
+                return null;
             }
 
             args.callee.sourcePathInfo = sourcePathInfo;
@@ -1212,30 +1366,39 @@ var tokenConverters = [
             return result;
         },
         "fold": function(scope, args){
-            var argValues = args.all(),
-                fn = argValues.pop(),
-                seed = argValues.pop(),
-                source = argValues[0],
-                result = seed,
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true);
+            var fn = args.get(2),
+                seedToken = args.getRaw(1, true),
+                seed = args.get(1),
+                sourceToken = args.getRaw(0, true),
+                source = args.get(0),
+                result = seed;
 
-            if(argValues.length > 1){
-                source = argValues;
-            }
+
+            var sourcePathInfo = new SourcePathInfo(sourceToken, source, true);
+            sourcePathInfo.mapSubPaths(source);
 
             if(!source || !source.length){
                 return result;
             }
 
+            var resultPathInfo = seedToken.sourcePathInfo;
+
             for(var i = 0; i < source.length; i++){
                 var callee = {};
-                result = scope.callWith(fn, [result, source[i]], callee);
-                if(callee.sourcePathInfo && callee.sourcePathInfo.subPaths){
-                    sourcePathInfo.subPaths[i] = callee.sourcePathInfo.subPaths[i];
-                }
+                result = scope.callWith(
+                    fn,
+                    [
+                        new ValueToken(result, resultPathInfo),
+                        new ValueToken(source[i], sourcePathInfo, i),
+                        i
+                    ],
+                    callee
+                );
+
+                resultPathInfo = callee.sourcePathInfo;
             }
 
-            args.callee.sourcePathInfo = sourcePathInfo;
+            args.callee.sourcePathInfo = resultPathInfo;
 
             return result;
         },

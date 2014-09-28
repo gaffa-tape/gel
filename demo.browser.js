@@ -1,12 +1,16 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var Gel = require('./gel'),
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Gel = require('./'),
 	gel = new Gel(),
 	crel = require('crel'),
     input,
     context,
     output,
+    fns,
     ui = crel('div',
         crel('h1', 'Gel tester (shift+enter to run)'),
+        fns = crel('div', {'class':'functions'},
+            crel('h2', 'Functions')
+        ),
         crel('div', {'class':'halfWidth'},
             crel('h2', 'Input (Gel)'),
             input = crel('textarea')
@@ -18,6 +22,12 @@ var Gel = require('./gel'),
         crel('h2', 'Output'),
         output = crel('pre')
     );
+
+Object.keys(gel.scope).map(function(fnName){
+    crel(fns,
+        crel('div', fnName)
+    );
+});
 
 window.gel = gel;
 
@@ -38,9 +48,10 @@ context.addEventListener('keypress', run);
 window.onload = function () {
     document.body.appendChild(ui);
 };
-},{"./gel":2,"crel":3}],2:[function(require,module,exports){
+},{"./":2,"crel":3}],2:[function(require,module,exports){
 var Lang = require('lang-js'),
     paths = require('gedi-paths'),
+    merge = require('merge'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,
@@ -108,10 +119,11 @@ function createKeywordTokeniser(Constructor, keyword){
 
 function StringToken(){}
 StringToken = createSpec(StringToken, Token);
-StringToken.precedence = 2;
-StringToken.prototype.precedence = 2;
+StringToken.tokenPrecedence = 2;
+StringToken.prototype.parsePrecedence = 2;
 StringToken.prototype.stringTerminal = '"';
 StringToken.prototype.name = 'StringToken';
+StringToken.prototype.static = true;
 StringToken.tokenise = function (substring) {
     if (substring.charAt(0) === this.prototype.stringTerminal) {
         var index = 0,
@@ -140,8 +152,8 @@ StringToken.prototype.evaluate = function () {
 
 function String2Token(){}
 String2Token = createSpec(String2Token, StringToken);
-String2Token.precedence = 1;
-String2Token.prototype.precedence = 1;
+String2Token.tokenPrecedence = 1;
+String2Token.prototype.parsePrecedence = 1;
 String2Token.prototype.stringTerminal = "'";
 String2Token.prototype.name = 'String2Token';
 String2Token.tokenise = StringToken.tokenise;
@@ -149,15 +161,45 @@ String2Token.tokenise = StringToken.tokenise;
 function ParenthesesToken(){
 }
 ParenthesesToken = createSpec(ParenthesesToken, Token);
-ParenthesesToken.precedence = 1;
-ParenthesesToken.prototype.precedence = 4;
+ParenthesesToken.tokenPrecedence = 1;
+ParenthesesToken.prototype.parsePrecedence = 4;
 ParenthesesToken.prototype.name = 'ParenthesesToken';
 ParenthesesToken.tokenise = function(substring) {
-    if(substring.charAt(0) === '(' || substring.charAt(0) === ')'){
+    if(substring.charAt(0) === '('){
         return new ParenthesesToken(substring.charAt(0), 1);
     }
 }
-ParenthesesToken.prototype.parse = createNestingParser(/^\($/,/^\)$/);
+var parenthesisParser = createNestingParser(ParenthesesEndToken);
+ParenthesesToken.prototype.parse = function(tokens, index, parse){
+    parenthesisParser.apply(this, arguments);
+
+    this.hasFill = this.childTokens._hasFill;
+    this.partials = this.childTokens._partials;
+};
+
+function executeFunction(parenthesesToken, scope, fn){
+    var outerArgs = parenthesesToken.childTokens.slice(1);
+
+    if(parenthesesToken.partials || parenthesesToken.hasFill){
+        parenthesesToken.result = function(scope, args){
+            scope._innerArgs = args;
+
+            var appliedArgs = [];
+
+            for(var i = 0; i < outerArgs.length; i++){
+                if(outerArgs[i] instanceof FillToken){
+                    appliedArgs.push.apply(appliedArgs, args.sliceRaw(parenthesesToken.partials));
+                }else{
+                    appliedArgs.push(outerArgs[i]);
+                }
+            }
+
+            return scope.callWith(fn, appliedArgs, parenthesesToken);
+        };
+        return;
+    }
+    parenthesesToken.result = scope.callWith(fn, parenthesesToken.childTokens.slice(1), parenthesesToken);
+}
 ParenthesesToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
@@ -173,13 +215,24 @@ ParenthesesToken.prototype.evaluate = function(scope){
         throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
     }
 
-    this.result = scope.callWith(functionToken.result, this.childTokens.slice(1), this);
+    executeFunction(this, scope, functionToken.result);
+};
+
+function ParenthesesEndToken(){}
+ParenthesesEndToken = createSpec(ParenthesesEndToken, Token);
+ParenthesesEndToken.tokenPrecedence = 1;
+ParenthesesEndToken.prototype.parsePrecedence = 4;
+ParenthesesEndToken.prototype.name = 'ParenthesesEndToken';
+ParenthesesEndToken.tokenise = function(substring) {
+    if(substring.charAt(0) === ')'){
+        return new ParenthesesEndToken(substring.charAt(0), 1);
+    }
 };
 
 function NumberToken(){}
 NumberToken = createSpec(NumberToken, Token);
-NumberToken.precedence = 2;
-NumberToken.prototype.precedence = 2;
+NumberToken.tokenPrecedence = 2;
+NumberToken.prototype.parsePrecedence = 2;
 NumberToken.prototype.name = 'NumberToken';
 NumberToken.tokenise = function(substring) {
     var specials = {
@@ -213,22 +266,31 @@ NumberToken.prototype.evaluate = function(scope){
     this.result = parseFloat(this.original);
 };
 
-function ValueToken(value, path, key){
+function ValueToken(value, sourcePathInfo, key){
+    this.original = 'Value';
+    this.length = this.original.length,
     this.result = value;
-    this.sourcePathInfo = new SourcePathInfo();
-    this.sourcePathInfo.path = path;
-    this.sourcePathInfo.drillTo(key);
+
+    if(sourcePathInfo){
+        this.sourcePathInfo = new SourcePathInfo();
+        this.sourcePathInfo.path = sourcePathInfo.path;
+        this.sourcePathInfo.subPaths = sourcePathInfo.subPaths && sourcePathInfo.subPaths.slice();
+    }
+
+    if(key != null){
+        this.sourcePathInfo.drillTo(key);
+    }
 }
 ValueToken = createSpec(ValueToken, Token);
-ValueToken.precedence = 2;
-ValueToken.prototype.precedence = 2;
+ValueToken.tokenPrecedence = 2;
+ValueToken.prototype.parsePrecedence = 2;
 ValueToken.prototype.name = 'ValueToken';
 ValueToken.prototype.evaluate = function(){};
 
 function NullToken(){}
 NullToken = createSpec(NullToken, Token);
-NullToken.precedence = 2;
-NullToken.prototype.precedence = 2;
+NullToken.tokenPrecedence = 2;
+NullToken.prototype.parsePrecedence = 2;
 NullToken.prototype.name = 'NullToken';
 NullToken.tokenise = createKeywordTokeniser(NullToken, "null");
 NullToken.prototype.evaluate = function(scope){
@@ -237,8 +299,8 @@ NullToken.prototype.evaluate = function(scope){
 
 function UndefinedToken(){}
 UndefinedToken = createSpec(UndefinedToken, Token);
-UndefinedToken.precedence = 2;
-UndefinedToken.prototype.precedence = 2;
+UndefinedToken.tokenPrecedence = 2;
+UndefinedToken.prototype.parsePrecedence = 2;
 UndefinedToken.prototype.name = 'UndefinedToken';
 UndefinedToken.tokenise = createKeywordTokeniser(UndefinedToken, 'undefined');
 UndefinedToken.prototype.evaluate = function(scope){
@@ -247,8 +309,8 @@ UndefinedToken.prototype.evaluate = function(scope){
 
 function TrueToken(){}
 TrueToken = createSpec(TrueToken, Token);
-TrueToken.precedence = 2;
-TrueToken.prototype.precedence = 2;
+TrueToken.tokenPrecedence = 2;
+TrueToken.prototype.parsePrecedence = 2;
 TrueToken.prototype.name = 'TrueToken';
 TrueToken.tokenise = createKeywordTokeniser(TrueToken, 'true');
 TrueToken.prototype.evaluate = function(scope){
@@ -257,8 +319,8 @@ TrueToken.prototype.evaluate = function(scope){
 
 function FalseToken(){}
 FalseToken = createSpec(FalseToken, Token);
-FalseToken.precedence = 2;
-FalseToken.prototype.precedence = 2;
+FalseToken.tokenPrecedence = 2;
+FalseToken.prototype.parsePrecedence = 2;
 FalseToken.prototype.name = 'FalseToken';
 FalseToken.tokenise = createKeywordTokeniser(FalseToken, 'false');
 FalseToken.prototype.evaluate = function(scope){
@@ -267,12 +329,12 @@ FalseToken.prototype.evaluate = function(scope){
 
 function DelimiterToken(){}
 DelimiterToken = createSpec(DelimiterToken, Token);
-DelimiterToken.precedence = 1;
-DelimiterToken.prototype.precedence = 1;
+DelimiterToken.tokenPrecedence = 1;
+DelimiterToken.prototype.parsePrecedence = 1;
 DelimiterToken.prototype.name = 'DelimiterToken';
 DelimiterToken.tokenise = function(substring) {
     var i = 0;
-    while(i < substring.length && substring.charAt(i).trim() === "" || substring.charAt(i) === ',') {
+    while(i < substring.length && substring.charAt(i).trim() === "") {
         i++;
     }
 
@@ -286,8 +348,8 @@ DelimiterToken.prototype.parse = function(tokens, position){
 
 function IdentifierToken(){}
 IdentifierToken = createSpec(IdentifierToken, Token);
-IdentifierToken.precedence = 3;
-IdentifierToken.prototype.precedence = 3;
+IdentifierToken.tokenPrecedence = 3;
+IdentifierToken.prototype.parsePrecedence = 3;
 IdentifierToken.prototype.name = 'IdentifierToken';
 IdentifierToken.tokenise = function(substring){
     var result = tokeniseIdentifier(substring);
@@ -309,8 +371,8 @@ IdentifierToken.prototype.evaluate = function(scope){
 function PeriodToken(){}
 PeriodToken = createSpec(PeriodToken, Token);
 PeriodToken.prototype.name = 'PeriodToken';
-PeriodToken.precedence = 2;
-PeriodToken.prototype.precedence = 2;
+PeriodToken.tokenPrecedence = 2;
+PeriodToken.prototype.parsePrecedence = 5;
 PeriodToken.tokenise = function(substring){
     var periodConst = ".";
     return (substring.charAt(0) === periodConst) ? new PeriodToken(periodConst, 1) : undefined;
@@ -344,11 +406,99 @@ PeriodToken.prototype.evaluate = function(scope){
     }
 };
 
+function CommaToken(){}
+CommaToken = createSpec(CommaToken, Token);
+CommaToken.prototype.name = 'CommaToken';
+CommaToken.tokenPrecedence = 2;
+CommaToken.prototype.parsePrecedence = 6;
+CommaToken.tokenise = function(substring){
+    var characterConst = ",";
+    return (substring.charAt(0) === characterConst) ? new CommaToken(characterConst, 1) : undefined;
+};
+CommaToken.prototype.parse = function(tokens, position){
+    this.leftToken = tokens.splice(position-1,1)[0];
+    this.rightToken = tokens.splice(position,1)[0];
+    if(!this.leftToken){
+        throw "Invalid syntax, expected token before ,";
+    }
+    if(!this.rightToken){
+        throw "Invalid syntax, expected token after ,";
+    }
+};
+CommaToken.prototype.evaluate = function(scope){
+    this.leftToken.evaluate(scope);
+    this.rightToken.evaluate(scope);
+
+    var leftToken = this.leftToken,
+        rightToken = this.rightToken,
+        leftPath = leftToken.sourcePathInfo && leftToken.sourcePathInfo.path,
+        leftPaths = leftToken.sourcePathInfo && leftToken.sourcePathInfo.subPaths,
+        rightPath = rightToken.sourcePathInfo && rightToken.sourcePathInfo.path;
+
+    this.sourcePathInfo = {
+        subPaths: []
+    };
+
+    if(leftToken instanceof CommaToken){
+        // concat
+        this.result = leftToken.result.slice();
+        this.sourcePathInfo.subPaths = leftPaths;
+    }else{
+        this.result = [];
+
+        this.result.push(leftToken.result);
+        this.sourcePathInfo.subPaths.push(leftPath);
+    }
+
+    this.result.push(rightToken.result);
+    this.sourcePathInfo.subPaths.push(rightPath);
+};
+
+function PartialToken(){}
+PartialToken = createSpec(PartialToken, Token);
+PartialToken.prototype.name = 'PartialToken';
+PartialToken.tokenPrecedence = 1;
+PartialToken.prototype.parsePrecedence = 4;
+PartialToken.tokenise = function(substring){
+    var characterConst = "_";
+    return (substring.charAt(0) === characterConst) ? new PartialToken(characterConst, 1) : undefined;
+};
+PartialToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "Partial tokens may only appear before a Fill token";
+    }
+    tokens._partials = tokens._partials || 0;
+    this._partialIndex = tokens._partials;
+    tokens._partials++;
+};
+PartialToken.prototype.evaluate = function(scope){
+    this.result = scope._innerArgs.get(this._partialIndex);
+};
+
+function FillToken(){}
+FillToken = createSpec(FillToken, Token);
+FillToken.prototype.name = 'FillToken';
+FillToken.tokenPrecedence = 1;
+FillToken.prototype.parsePrecedence = 4;
+FillToken.tokenise = function(substring){
+    var charactersConst = "...";
+    return (substring.slice(0,3) === charactersConst) ? new FillToken(charactersConst, 3) : undefined;
+};
+FillToken.prototype.parse = function(tokens){
+    if(tokens._hasFill){
+        throw "A function call may only have one fill token"
+    };
+    tokens._hasFill = true;
+};
+FillToken.prototype.evaluate = function(){
+    this.result = scope._innerArgs.rest();
+};
+
 function PipeToken(){}
 PipeToken = createSpec(PipeToken, Token);
 PipeToken.prototype.name = 'PipeToken';
-PipeToken.precedence = 1;
-PipeToken.prototype.precedence = 5;
+PipeToken.tokenPrecedence = 1;
+PipeToken.prototype.parsePrecedence = 6;
 PipeToken.tokenise = function(substring){
     var pipeConst = "|>";
     return (substring.slice(0,2) === pipeConst) ? new PipeToken(pipeConst, pipeConst.length) : undefined;
@@ -360,68 +510,92 @@ PipeToken.prototype.parse = function(tokens, position){
 PipeToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
-    var functionToken = this.functionToken;
-
-    if(!functionToken){
+    if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
 
+    this.functionToken.evaluate(scope);
 
-    functionToken.evaluate(scope);
-
-    if(typeof functionToken.result !== 'function'){
-        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    if(typeof this.functionToken.result !== 'function'){
+        throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
     }
 
-    this.result = scope.callWith(functionToken.result, [this.argumentToken], this);
+    this.result = scope.callWith(this.functionToken.result, [this.argumentToken], this);
 };
 
 function PipeApplyToken(){}
 PipeApplyToken = createSpec(PipeApplyToken, Token);
 PipeApplyToken.prototype.name = 'PipeApplyToken';
-PipeApplyToken.precedence = 1;
-PipeApplyToken.prototype.precedence = 5;
+PipeApplyToken.tokenPrecedence = 1;
+PipeApplyToken.prototype.parsePrecedence = 6;
 PipeApplyToken.tokenise = function(substring){
     var pipeConst = "~>";
     return (substring.slice(0,2) === pipeConst) ? new PipeApplyToken(pipeConst, pipeConst.length) : undefined;
 };
 PipeApplyToken.prototype.parse = function(tokens, position){
-    this.argumentToken = tokens.splice(position-1,1)[0];
+    this.argumentsToken = tokens.splice(position-1,1)[0];
     this.functionToken = tokens.splice(position,1)[0];
 };
 PipeApplyToken.prototype.evaluate = function(scope){
     scope = new Scope(scope);
 
-    var functionToken = this.functionToken;
-
-    if(!functionToken){
+    if(!this.functionToken){
         throw "Invalid function call. No function was provided to execute.";
     }
 
-
-    functionToken.evaluate(scope);
-
-    if(typeof functionToken.result !== 'function'){
-        throw functionToken.original + " (" + functionToken.result + ")" + " is not a function";
+    if(!this.argumentsToken){
+        throw "Invalid function call. No arguments were provided to apply.";
     }
 
-    this.result = scope.callWith(functionToken.result, this.argumentToken, this);
+    this.functionToken.evaluate(scope);
+    this.argumentsToken.evaluate(scope);
+
+    if(typeof this.functionToken.result !== 'function'){
+        throw this.functionToken.original + " (" + this.functionToken.result + ")" + " is not a function";
+    }
+
+    if(!Array.isArray(this.argumentsToken.result)){
+        this.result = null;
+        return;
+    }
+
+    this.result = scope.callWith(this.functionToken.result, this.argumentsToken.result, this);
 };
 
-function FunctionToken(){}
-FunctionToken = createSpec(FunctionToken, Token);
-FunctionToken.precedence = 1;
-FunctionToken.prototype.precedence = 2;
-FunctionToken.prototype.name = 'FunctionToken';
-FunctionToken.tokenise = function convertFunctionToken(substring) {
-    if(substring.charAt(0) === '{' || substring.charAt(0) === '}'){
-        return new FunctionToken(substring.charAt(0), 1);
+function BraceToken(){}
+BraceToken = createSpec(BraceToken, Token);
+BraceToken.tokenPrecedence = 1;
+BraceToken.prototype.parsePrecedence = 3;
+BraceToken.prototype.name = 'BraceToken';
+BraceToken.tokenise = function(substring) {
+    if(substring.charAt(0) === '{'){
+        return new BraceToken(substring.charAt(0), 1);
     }
 };
-FunctionToken.prototype.parse = createNestingParser(/^\{$/,/^\}$/);
-FunctionToken.prototype.evaluate = function(scope){
-    var parameterNames = this.childTokens.slice(),
-        fnBody = parameterNames.pop();
+BraceToken.prototype.parse = createNestingParser(BraceEndToken);
+BraceToken.prototype.evaluate = function(scope){
+    var parameterNames = this.childTokens.slice();
+
+    // Object literal
+    if(parameterNames.length === 0 || parameterNames[0] instanceof TupleToken){
+        this.result = {};
+        this.sourcePathInfo = new SourcePathInfo(null, {}, true);
+
+        for(var i = 0; i < parameterNames.length; i++){
+            var token = parameterNames[i];
+            token.evaluate(scope);
+            this.result[token.keyToken.result] = token.valueToken.result;
+
+            if(token.valueToken.sourcePathInfo){
+                this.sourcePathInfo.subPaths[key] = token.valueToken.sourcePathInfo.path;
+            }
+        };
+
+        return;
+    }
+
+    // Function expression
+    var fnBody = parameterNames.pop();
 
     this.result = function(scope, args){
         scope = new Scope(scope);
@@ -439,6 +613,41 @@ FunctionToken.prototype.evaluate = function(scope){
 
         return fnBody.result;
     };
+};
+
+function BraceEndToken(){}
+BraceEndToken = createSpec(BraceEndToken, Token);
+BraceEndToken.tokenPrecedence = 1;
+BraceEndToken.prototype.parsePrecedence = 4;
+BraceEndToken.prototype.name = 'BraceEndToken';
+BraceEndToken.tokenise = function(substring) {
+    if(substring.charAt(0) === '}'){
+        return new BraceEndToken(substring.charAt(0), 1);
+    }
+};
+
+function Tuple(key, value){
+    this[key] = value;
+}
+
+function TupleToken(){}
+TupleToken = createSpec(TupleToken, Token);
+TupleToken.prototype.name = 'TupleToken';
+TupleToken.tokenPrecedence = 2;
+TupleToken.prototype.parsePrecedence = 6;
+TupleToken.tokenise = function(substring){
+    var tupleConst = ":";
+    return (substring.charAt(0) === tupleConst) ? new TupleToken(tupleConst, 1) : undefined;
+};
+TupleToken.prototype.parse = function(tokens, position){
+    this.keyToken = tokens.splice(position-1,1)[0];
+    this.valueToken = tokens.splice(position, 1)[0];
+};
+TupleToken.prototype.evaluate = function(scope){
+    this.keyToken.evaluate(scope);
+    this.valueToken.evaluate(scope);
+
+    this.result = new Tuple(this.keyToken.result, this.valueToken.result);
 };
 
 function SourcePathInfo(token, source, trackSubPaths){
@@ -481,11 +690,17 @@ SourcePathInfo.prototype.setSubPaths = function(paths){
     }
     this.subPaths = paths;
 };
+SourcePathInfo.prototype.mapSubPaths = function(object){
+    for(var key in object){
+        if(object.hasOwnProperty(key)){
+            this.setSubPath(key, key);
+        }
+    }
+};
 SourcePathInfo.prototype.drillTo = function(key){
     if(this.subPaths){
         this.path = this.subPaths[key];
-    }
-    if(this.path){
+    }else if(this.path){
         this.path = paths.append(this.path, paths.create(key));
     }
 };
@@ -534,10 +749,20 @@ function gelFilter(scope, args) {
     return filteredItems;
 }
 
+function gelMerge(scope, args){
+    var result = {};
+    while(args.hasNext()){
+        var nextObject = args.next();
+        result = merge(result, nextObject);
+    }
+    return result;
+}
+
 var tokenConverters = [
         StringToken,
         String2Token,
         ParenthesesToken,
+        ParenthesesEndToken,
         NumberToken,
         NullToken,
         UndefinedToken,
@@ -545,12 +770,33 @@ var tokenConverters = [
         FalseToken,
         DelimiterToken,
         IdentifierToken,
+        CommaToken,
         PeriodToken,
+        PartialToken,
+        FillToken,
         PipeToken,
         PipeApplyToken,
-        FunctionToken
+        BraceToken,
+        BraceEndToken,
+        TupleToken
     ],
     scope = {
+        "parseInt":function(scope, args){
+            return parseInt(args.next());
+        },
+        "parseFloat":function(scope, args){
+            return parseFloat(args.next());
+        },
+        "toFixed": function(scope, args){
+            var num = args.next(),
+                decimals = args.get(1) || 2;
+
+            if(isNaN(num)){
+                return;
+            }
+
+            return num.toFixed(decimals);
+        },
         "toString":function(scope, args){
             return "" + args.next();
         },
@@ -565,6 +811,9 @@ var tokenConverters = [
         },
         "*":function(scope, args){
             return args.next() * args.next();
+        },
+        "%":function(scope, args){
+            return args.next() % args.next();
         },
         "isNaN":function(scope, args){
             return isNaN(args.get(0));
@@ -660,23 +909,21 @@ var tokenConverters = [
             return nextArg;
         },
         "&&":function(scope, args){
-            var nextArg;
+            var nextArg,
+                rawResult,
+                argIndex = -1;
+
             while(args.hasNext()){
+                argIndex++;
                 nextArg = args.next();
                 if(!nextArg){
                     break;
                 }
             }
-            var rawResult = args.getRaw(args.length-1);
+
+            rawResult = args.getRaw(argIndex);
             args.callee.sourcePathInfo = rawResult && rawResult.sourcePathInfo;
             return nextArg;
-        },
-        "object":function(scope, args){
-            var result = {};
-            while(args.hasNext()){
-                result[args.next()] = args.next();
-            }
-            return result;
         },
         "keys":function(scope, args){
             var object = args.next();
@@ -684,10 +931,18 @@ var tokenConverters = [
         },
         "values":function(scope, args){
             var target = args.next(),
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), target, true),
                 result = [];
+
             for(var key in target){
                 result.push(target[key]);
+
+                sourcePathInfo.setSubPath(result.length - 1, key);
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
         "invert":function(scope, args){
@@ -698,49 +953,44 @@ var tokenConverters = [
             }
             return result;
         },
-        "extend":function(scope, args){
-            var result = {};
-            while(args.hasNext()){
-                var nextObject = args.next();
-                for(var key in nextObject){
-                    result[key] = nextObject[key];
+        "extend": gelMerge,
+        "merge": gelMerge,
+        "array":function(scope, args){
+            var argTokens = args.raw(),
+                argValues = args.all(),
+                result = [],
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, [], true);
+
+            for(var i = 0; i < argValues.length; i++) {
+                result.push(argValues[i]);
+                if(argTokens[i] instanceof Token && argTokens[i].sourcePathInfo){
+                    sourcePathInfo.subPaths[i] = argTokens[i].sourcePathInfo.path;
                 }
             }
+
+            callee.sourcePathInfo = sourcePathInfo;
+
             return result;
         },
-        "array":function(scope, args){
-            var result = [];
-            while(args.hasNext()){
-                result.push(args.next());
-            }
-            return result;
-        },
-        "map":function(scope, args){
-            var source = args.next(),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
-                isArray = Array.isArray(source),
-                result = isArray ? [] : {},
-                functionToken = args.next();
+        "object":function(scope, args){
+            var result = {},
+                callee = args.callee,
+                sourcePathInfo = new SourcePathInfo(null, {}, true);
 
-            if(isArray){
-                fastEach(source, function(item, index){
-                    var callee = {};
-                    result[index] = scope.callWith(functionToken, [new ValueToken(item, sourcePathInfo.path, index)], callee);
-                    if(callee.sourcePathInfo){
-                        sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
-                    }
-                });
-            }else{
-                for(var key in source){
-                    var callee = {};
-                    result[key] = scope.callWith(functionToken, [new ValueToken(source[key], sourcePathInfo.path, key)], callee);
-                    if(callee.sourcePathInfo){
-                        sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
-                    }
-                };
+            for(var i = 0; i < args.length; i+=2){
+                var key = args.get(i),
+                    valueToken = args.getRaw(i+1),
+                    value = args.get(i+1);
+
+                result[key] = value;
+
+                if(valueToken instanceof Token && valueToken.sourcePathInfo){
+                    sourcePathInfo.subPaths[key] = valueToken.sourcePathInfo.path;
+                }
             }
 
-            args.callee.sourcePathInfo = sourcePathInfo;
+            callee.sourcePathInfo = sourcePathInfo;
 
             return result;
         },
@@ -812,7 +1062,7 @@ var tokenConverters = [
             });
 
             for(var i = 0; i < sortedPaths.length; i++) {
-                result[paths.toParts(sortedPaths[i]).pop()] = source[i];
+                result[i] = sourcePathInfo.original[paths.toParts(sortedPaths[i]).pop()];
             }
 
             sourcePathInfo.setSubPaths(sortedPaths);
@@ -843,37 +1093,42 @@ var tokenConverters = [
             }
         },
         "concat":function(scope, args){
-            var result = args.next(),
+            var result = [],
                 argCount = 0,
                 sourcePathInfo = new SourcePathInfo(),
-                sourcePaths = Array.isArray(result) && [];
+                sourcePaths = [];
 
-            var addPaths = function(){
-                if(sourcePaths){
-                    var argToken = args.getRaw(argCount++),
-                        argSourcePathInfo = argToken && argToken.sourcePathInfo;
+            var addPaths = function(argToken){
+                var argSourcePathInfo = argToken.sourcePathInfo;
 
-                    if(argSourcePathInfo){
-                        if(Array.isArray(argSourcePathInfo.subPaths)){
+                if(argSourcePathInfo){
+                    if(Array.isArray(argSourcePathInfo.subPaths)){
                         sourcePaths = sourcePaths.concat(argSourcePathInfo.subPaths);
-                        }else{
-                            for(var i = 0; i < argToken.result.length; i++){
-                                sourcePaths.push(paths.append(argSourcePathInfo.path, paths.create(i)));
-                            }
+                    }else if(argSourcePathInfo.path){
+                        for(var i = 0; i < argToken.result.length; i++){
+                            sourcePaths.push(paths.append(argSourcePathInfo.path, paths.create(i)));
                         }
                     }
+                }else{
+                    // Non-path-tracked array
+                    var nullPaths = [];
+                    for(var i = 0; i < argToken.result.length; i++) {
+                        nullPaths.push(null);
+                    };
+                    sourcePaths = sourcePaths.concat(nullPaths);
                 }
-            }
+            };
 
-            addPaths();
-
-            while(args.hasNext()){
+            while(argCount < args.length){
                 if(result == null || !result.concat){
                     return undefined;
                 }
-                var next = args.next();
-                Array.isArray(next) && (result = result.concat(next));
-                addPaths();
+                var nextRaw = args.getRaw(argCount, true);
+                if(Array.isArray(nextRaw.result)){
+                    result = result.concat(nextRaw.result);
+                    addPaths(nextRaw);
+                }
+                argCount++;
             }
             sourcePathInfo.subPaths = sourcePaths;
             args.callee.sourcePathInfo = sourcePathInfo;
@@ -906,14 +1161,24 @@ var tokenConverters = [
                 return;
             }
 
-            // clone source
-            source = source.slice();
+            if(typeof source !== 'string'){
 
-            sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+                // clone source
+                source = source.slice();
+
+                sourcePathInfo = new SourcePathInfo(args.getRaw(sourceTokenIndex), source, true);
+
+                if(sourcePathInfo.path){
+                    if(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths){
+                        sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
+                    }else{
+                        sourcePathInfo.mapSubPaths(source);
+                        sourcePathInfo.setSubPaths(sourcePathInfo.subPaths.slice(start, end));
+                    }
+                }
+            }
 
             var result = source.slice(start, end);
-
-            sourcePathInfo.setSubPaths(sourcePathInfo.innerPathInfo && sourcePathInfo.innerPathInfo.subPaths && sourcePathInfo.innerPathInfo.subPaths.slice(start, end));
 
             args.callee.sourcePathInfo = sourcePathInfo;
 
@@ -925,16 +1190,20 @@ var tokenConverters = [
         },
         "last":function(scope, args){
             var source = args.next(),
-                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source);
-
-            sourcePathInfo.drillTo(source.length - 1);
-
-            args.callee.sourcePathInfo = sourcePathInfo;
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source),
+                lastIndex;
 
             if(!Array.isArray(source)){
                 return;
             }
-            return source[source.length - 1];
+
+            lastIndex = Math.max(0, source.length - 1);
+
+            sourcePathInfo.drillTo(lastIndex);
+
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return source[lastIndex];
         },
         "first":function(scope, args){
             var source = args.next(),
@@ -1105,7 +1374,7 @@ var tokenConverters = [
                 var baseDate = args.next();
 
                 return new Date(baseDate.setDate(baseDate.getDate() + args.next()));
-            }
+            };
 
             return date;
         })(),
@@ -1115,24 +1384,76 @@ var tokenConverters = [
         "fromJSON":function(scope, args){
             return JSON.parse(args.next());
         },
-        "fold": function(scope, args){
-            var args = args.all(),
-                fn = args.pop(),
-                seed = args.pop(),
-                array = args[0],
-                result = seed;
+        "map":function(scope, args){
+            var source = args.next(),
+                sourcePathInfo = new SourcePathInfo(args.getRaw(0), source, true),
+                isArray = Array.isArray(source),
+                isObject = typeof source === 'object' && source !== null,
+                result = isArray ? [] : {},
+                functionToken = args.next();
 
-            if(args.length > 1){
-                array = args;
+            if(isArray){
+                fastEach(source, function(item, index){
+                    var callee = {};
+                    result[index] = scope.callWith(functionToken, [
+                        new ValueToken(item, new SourcePathInfo(args.getRaw(0), source), index)
+                    ], callee);
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[index] = callee.sourcePathInfo.path;
+                    }
+                });
+            }else if(isObject){
+                for(var key in source){
+                    var callee = {};
+                    result[key] = scope.callWith(functionToken, [
+                        new ValueToken(source[key], new SourcePathInfo(args.getRaw(0), source), key)
+                    ], callee);
+                    if(callee.sourcePathInfo){
+                        sourcePathInfo.subPaths[key] = callee.sourcePathInfo.path;
+                    }
+                }
+            }else{
+                return null;
             }
 
-            if(!array || !array.length){
+            args.callee.sourcePathInfo = sourcePathInfo;
+
+            return result;
+        },
+        "fold": function(scope, args){
+            var fn = args.get(2),
+                seedToken = args.getRaw(1, true),
+                seed = args.get(1),
+                sourceToken = args.getRaw(0, true),
+                source = args.get(0),
+                result = seed;
+
+
+            var sourcePathInfo = new SourcePathInfo(sourceToken, source, true);
+            sourcePathInfo.mapSubPaths(source);
+
+            if(!source || !source.length){
                 return result;
             }
 
-            for(var i = 0; i < array.length; i++){
-                result = scope.callWith(fn, [result, array[i]], this);
+            var resultPathInfo = seedToken.sourcePathInfo;
+
+            for(var i = 0; i < source.length; i++){
+                var callee = {};
+                result = scope.callWith(
+                    fn,
+                    [
+                        new ValueToken(result, resultPathInfo),
+                        new ValueToken(source[i], sourcePathInfo, i),
+                        i
+                    ],
+                    callee
+                );
+
+                resultPathInfo = callee.sourcePathInfo;
             }
+
+            args.callee.sourcePathInfo = resultPathInfo;
 
             return result;
         },
@@ -1154,7 +1475,7 @@ var tokenConverters = [
                 caller = args.callee;
 
             return function(scope, args){
-                return scope.callWith(fn, outerArgs, caller)
+                return scope.callWith(fn, outerArgs, caller);
             };
         },
         "compose": function(scope, args){
@@ -1172,7 +1493,7 @@ var tokenConverters = [
             };
         },
         "apply": function(scope, args){
-            var fn = args.next()
+            var fn = args.next(),
                 outerArgs = args.next();
 
             return scope.callWith(fn, outerArgs, args.callee);
@@ -1200,8 +1521,52 @@ var tokenConverters = [
             }
 
             return result;
+        },
+        "keyFor": function(scope, args){
+            var value = args.next(),
+                target = args.next();
+
+            for(var key in target){
+                if(!target.hasOwnProperty(key)){
+                    continue;
+                }
+
+                if(target[key] === value){
+                    return key;
+                }
+            }
+        },
+        "regex": function(scope, args){
+            var all = args.all();
+
+            return new RegExp(all[0], all[1]);
+        },
+        "match": function(scope, args){
+            var string = args.next();
+
+            if(typeof string !== 'string'){
+                return false;
+            }
+
+            return string.match(args.next());
         }
     };
+
+function createMathFunction(key){
+    return function(scope, args){
+        var all = args.all();
+        return Math[key].apply(Math, all);
+    };
+}
+
+scope.math = {};
+
+var mathFunctionNames = ['abs','acos','asin','atan','atan2','ceil','cos','exp','floor','imul','log','max','min','pow','random','round','sin','sqrt','tan'];
+
+for(var i = 0; i < mathFunctionNames.length; i++){
+    var key = mathFunctionNames[i];
+    scope.math[key] = createMathFunction(key);
+}
 
 
 Gel = function(){
@@ -1211,24 +1576,28 @@ Gel = function(){
     gel.lang = lang;
     gel.tokenise = function(expression){
         return gel.lang.tokenise(expression, this.tokenConverters);
-    }
+    };
     gel.evaluate = function(expression, injectedScope, returnAsTokens){
-        var scope = new Scope();
+        var scope = new Scope(this.scope);
 
-        scope.add(this.scope).add(injectedScope);
+        scope.add(injectedScope);
 
         return lang.evaluate(expression, scope, this.tokenConverters, returnAsTokens);
     };
     gel.tokenConverters = tokenConverters.slice();
-    gel.scope = Object.create(scope);
+    gel.scope = merge({}, scope);
 
     return gel;
+};
+
+for (var i = 0; i < tokenConverters.length; i++) {
+    Gel[tokenConverters[i].prototype.name] = tokenConverters[i];
 };
 
 Gel.Token = Token;
 Gel.Scope = Scope;
 module.exports = Gel;
-},{"gedi-paths":5,"lang-js":6,"spec-js":8}],3:[function(require,module,exports){
+},{"gedi-paths":5,"lang-js":6,"merge":8,"spec-js":9}],3:[function(require,module,exports){
 //Copyright (C) 2012 Kory Nunn
 
 //Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -1506,9 +1875,7 @@ function createPath(path){
         var parts = [];
         for (var i = 0; i < path.length; i++) {
             var pathPart = path[i];
-            if(pathPart.indexOf('\\') >= 0){
-                pathPart = pathPart.replace(/([\[|\]|\\|\/])/g, '\\$1');
-            }
+            pathPart = pathPart.replace(/([\[|\]|\\|\/])/g, '\\$1');
             parts.push(pathPart);
         }
         if(parts.length === 1 && parts[0] === rootPath){
@@ -1542,15 +1909,16 @@ function pathToParts(path){
 
     path = path.slice(1,-1);
 
+    if(path === ""){
+        return [];
+    }
+
     var lastPartIndex = 0,
         parts,
         nextChar,
         currentChar;
 
     if(path.indexOf('\\') < 0){
-        if(path === ""){
-            return [];
-        }
         return path.split(pathSeparator);
     }
 
@@ -1652,7 +2020,8 @@ module.exports = {
     }
 };
 },{"./detectPath":4}],6:[function(require,module,exports){
-var Token = require('./src/token');
+(function (process){
+var Token = require('./token');
 
 function fastEach(items, callback) {
     for (var i = 0; i < items.length; i++) {
@@ -1661,7 +2030,32 @@ function fastEach(items, callback) {
     return items;
 }
 
+var now;
+
+if(typeof process !== 'undefined' && process.hrtime){
+    now = function(){
+        var time = process.hrtime();
+        return time[0] + time[1] / 1000000;
+    };
+}else if(typeof performance !== 'undefined' && performance.now){
+    now = function(){
+        return performance.now();
+    };
+}else if(Date.now){
+    now = function(){
+        return Date.now();
+    };
+}else{
+    now = function(){
+        return new Date().getTime();
+    };
+}
+
 function callWith(fn, fnArguments, calledToken){
+    if(fn instanceof Token){
+        fn.evaluate(scope);
+        fn = fn.result;
+    }
     var argIndex = 0,
         scope = this,
         args = {
@@ -1711,20 +2105,59 @@ function callWith(fn, fnArguments, calledToken){
                 return fnArguments[argIndex++];
             },
             all: function(){
+                var allArgs = fnArguments.slice();
+                for(var i = 0; i < allArgs.length; i++){
+                    if(allArgs[i] instanceof Token){
+                        allArgs[i].evaluate(scope)
+                        allArgs[i] = allArgs[i].result;
+                    }
+                }
+                return allArgs;
+            },
+            rest: function(){
                 var allArgs = [];
                 while(this.hasNext()){
                     allArgs.push(this.next());
                 }
                 return allArgs;
+            },
+            restRaw: function(evaluated){
+                var rawArgs = fnArguments.slice();
+                if(evaluated){
+                    for(var i = argIndex; i < rawArgs.length; i++){
+                        if(rawArgs[i] instanceof Token){
+                            rawArgs[i].evaluate(scope);
+                        }
+                    }
+                }
+                return rawArgs;
+            },
+            slice: function(start, end){
+                return this.all().slice(start, end);
+            },
+            sliceRaw: function(start, end, evaluated){
+                var rawArgs = fnArguments.slice(start, end);
+                if(evaluated){
+                    fastEach(rawArgs, function(arg){
+                        if(arg instanceof Token){
+                            arg.evaluate(scope);
+                        }
+                    });
+                }
+                return rawArgs;
             }
         };
+
+    scope._args = args;
 
     return fn(scope, args);
 }
 
 function Scope(oldScope){
     this.__scope__ = {};
-    this.__outerScope__ = oldScope;
+    if(oldScope){
+        this.__outerScope__ = oldScope instanceof Scope ? oldScope : {__scope__:oldScope};
+    }
 }
 Scope.prototype.get = function(key){
     var scope = this;
@@ -1762,40 +2195,32 @@ Scope.prototype.isDefined = function(key){
 Scope.prototype.callWith = callWith;
 
 // Takes a start and end regex, returns an appropriate parse function
-function createNestingParser(openRegex, closeRegex){
-    return function(tokens, index){
-        if(this.original.match(openRegex)){
-            var position = index,
-                opens = 1;
+function createNestingParser(closeConstructor){
+    return function(tokens, index, parse){
+        var openConstructor = this.constructor,
+            position = index,
+            opens = 1;
 
-            while(position++, position <= tokens.length && opens){
-                if(!tokens[position]){
-                    throw "Invalid nesting. No closing token was found matching " + closeRegex.toString();
-                }
-                if(tokens[position].original.match(openRegex)){
-                    opens++;
-                }
-                if(tokens[position].original.match(closeRegex)){
-                    opens--;
-                }
+        while(position++, position <= tokens.length && opens){
+            if(!tokens[position]){
+                throw "Invalid nesting. No closing token was found";
             }
-
-            // remove all wrapped tokens from the token array, including nest end token.
-            var childTokens = tokens.splice(index + 1, position - 1 - index);
-
-            // Remove the nest end token.
-            childTokens.pop();
-
-            // parse them, then add them as child tokens.
-            this.childTokens = parse(childTokens);
-
-            //Remove nesting end token
-        }else{
-            // If a nesting end token is found during parsing,
-            // there is invalid nesting,
-            // because the opening token should remove its closing token.
-            throw "Invalid nesting. No opening token was found matching " + openRegex.toString();
+            if(tokens[position] instanceof openConstructor){
+                opens++;
+            }
+            if(tokens[position] instanceof closeConstructor){
+                opens--;
+            }
         }
+
+        // remove all wrapped tokens from the token array, including nest end token.
+        var childTokens = tokens.splice(index + 1, position - 1 - index);
+
+        // Remove the nest end token.
+        childTokens.pop();
+
+        // parse them, then add them as child tokens.
+        this.childTokens = parse(childTokens);
     };
 }
 
@@ -1808,9 +2233,9 @@ function scanForToken(tokenisers, expression){
     }
 }
 
-function sortByPrecedence(items){
+function sortByPrecedence(items, key){
     return items.slice().sort(function(a,b){
-        var precedenceDifference = a.precedence - b.precedence;
+        var precedenceDifference = a[key] - b[key];
         return precedenceDifference ? precedenceDifference : items.indexOf(a) - items.indexOf(b);
     });
 }
@@ -1824,7 +2249,7 @@ function tokenise(expression, tokenConverters, memoisedTokens) {
         return memoisedTokens[expression].slice();
     }
 
-    tokenConverters = sortByPrecedence(tokenConverters);
+    tokenConverters = sortByPrecedence(tokenConverters, 'tokenPrecedence');
 
     var originalExpression = expression,
         tokens = [],
@@ -1859,7 +2284,7 @@ function tokenise(expression, tokenConverters, memoisedTokens) {
 
 function parse(tokens){
     var parsedTokens = 0,
-        tokensByPrecedence = sortByPrecedence(tokens),
+        tokensByPrecedence = sortByPrecedence(tokens, 'parsePrecedence'),
         currentToken = tokensByPrecedence[0],
         tokenNumber = 0;
 
@@ -1872,7 +2297,7 @@ function parse(tokens){
     }
 
     if(currentToken.parse){
-        currentToken.parse(tokens, tokens.indexOf(currentToken));
+        currentToken.parse(tokens, tokens.indexOf(currentToken), parse);
     }
 
     // Even if the token has no parse method, it is still concidered 'parsed' at this point.
@@ -1953,11 +2378,7 @@ function Lang(){
             lastToken;
 
         if(!(scope instanceof Scope)){
-            var injectedScope = scope;
-
-            scope = new Scope();
-
-            scope.add(injectedScope);
+            scope = new Scope(scope);
         }
 
         if(Array.isArray(expression)){
@@ -1973,11 +2394,11 @@ function Lang(){
         }
 
 
-        var startTime = new Date();
+        var startTime = now();
         evaluatedTokens = evaluate(expressionTree , scope);
         addStat({
             expression: expression,
-            time: new Date() - startTime
+            time: now() - startTime
         });
 
         if(returnAsTokens){
@@ -1998,7 +2419,8 @@ Lang.Scope = Scope;
 Lang.Token = Token;
 
 module.exports = Lang;
-},{"./src/token":7}],7:[function(require,module,exports){
+}).call(this,require('_process'))
+},{"./token":7,"_process":10}],7:[function(require,module,exports){
 function Token(substring, length){
     this.original = substring;
     this.length = length;
@@ -2011,6 +2433,88 @@ Token.prototype.valueOf = function(){
 
 module.exports = Token;
 },{}],8:[function(require,module,exports){
+/*!
+ * @name JavaScript/NodeJS Merge v1.1.3
+ * @author yeikos
+ * @repository https://github.com/yeikos/js.merge
+
+ * Copyright 2014 yeikos - MIT license
+ * https://raw.github.com/yeikos/js.merge/master/LICENSE
+ */
+
+;(function(isNode) {
+
+	function merge() {
+
+		var items = Array.prototype.slice.call(arguments),
+			result = items.shift(),
+			deep = (result === true),
+			size = items.length,
+			item, index, key;
+
+		if (deep || typeOf(result) !== 'object')
+
+			result = {};
+
+		for (index=0;index<size;++index)
+
+			if (typeOf(item = items[index]) === 'object')
+
+				for (key in item)
+
+					result[key] = deep ? clone(item[key]) : item[key];
+
+		return result;
+
+	}
+
+	function clone(input) {
+
+		var output = input,
+			type = typeOf(input),
+			index, size;
+
+		if (type === 'array') {
+
+			output = [];
+			size = input.length;
+
+			for (index=0;index<size;++index)
+
+				output[index] = clone(input[index]);
+
+		} else if (type === 'object') {
+
+			output = {};
+
+			for (index in input)
+
+				output[index] = clone(input[index]);
+
+		}
+
+		return output;
+
+	}
+
+	function typeOf(input) {
+
+		return ({}).toString.call(input).match(/\s([\w]+)/)[1].toLowerCase();
+
+	}
+
+	if (isNode) {
+
+		module.exports = merge;
+
+	} else {
+
+		window.merge = merge;
+
+	}
+
+})(typeof module === 'object' && module && typeof module.exports === 'object' && module.exports);
+},{}],9:[function(require,module,exports){
 Object.create = Object.create || function (o) {
     if (arguments.length > 1) {
         throw new Error('Object.create implementation only accepts the first parameter.');
@@ -2048,4 +2552,69 @@ function createSpec(child, parent){
 }
 
 module.exports = createSpec;
-},{}]},{},[1])
+},{}],10:[function(require,module,exports){
+// shim for using process in browser
+
+var process = module.exports = {};
+
+process.nextTick = (function () {
+    var canSetImmediate = typeof window !== 'undefined'
+    && window.setImmediate;
+    var canPost = typeof window !== 'undefined'
+    && window.postMessage && window.addEventListener
+    ;
+
+    if (canSetImmediate) {
+        return function (f) { return window.setImmediate(f) };
+    }
+
+    if (canPost) {
+        var queue = [];
+        window.addEventListener('message', function (ev) {
+            var source = ev.source;
+            if ((source === window || source === null) && ev.data === 'process-tick') {
+                ev.stopPropagation();
+                if (queue.length > 0) {
+                    var fn = queue.shift();
+                    fn();
+                }
+            }
+        }, true);
+
+        return function nextTick(fn) {
+            queue.push(fn);
+            window.postMessage('process-tick', '*');
+        };
+    }
+
+    return function nextTick(fn) {
+        setTimeout(fn, 0);
+    };
+})();
+
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+}
+
+// TODO(shtylman)
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+
+},{}]},{},[1]);
