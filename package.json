@@ -30,7 +30,7 @@
     "gedi-paths": "^1.0.0",
     "lang-js": "^2.0.0",
     "merge": "^1.2.0",
-    "spec-js": "0.0.x"
+    "spec-js": "^1.0.0"
   },
   "keywords": [
     "gel",
