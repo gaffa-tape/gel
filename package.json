@@ -26,6 +26,7 @@
     "node": ">=0.6"
   },
   "dependencies": {
+    "clean-merge": "^1.0.0",
     "gedi-paths": "^1.0.0",
     "lang-js": "^2.2.0",
     "merge": "^1.1.3",
