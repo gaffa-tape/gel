@@ -1,6 +1,6 @@
 var Lang = require('lang-js'),
     paths = require('gedi-paths'),
-    merge = require('merge'),
+    merge = require('clean-merge'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,
@@ -15,7 +15,7 @@ function fastEach(items, callback) {
 }
 
 function quickIndexOf(array, value){
-    var length = array.length
+    var length = array.length;
     for(var i = 0; i < length && array[i] !== value;i++) {}
     return i < length ? i : -1;
 }
@@ -94,10 +94,10 @@ StringToken.tokenise = function (substring) {
             index + escapes + 1
         );
     }
-}
+};
 StringToken.prototype.evaluate = function () {
     this.result = this.original.slice(1,-1);
-}
+};
 
 function String2Token(){}
 String2Token = createSpec(String2Token, StringToken);
@@ -117,7 +117,7 @@ ParenthesesToken.tokenise = function(substring) {
     if(substring.charAt(0) === '('){
         return new ParenthesesToken(substring.charAt(0), 1);
     }
-}
+};
 var parenthesisParser = createNestingParser(ParenthesesEndToken);
 ParenthesesToken.prototype.parse = function(tokens, index, parse){
     parenthesisParser.apply(this, arguments);
@@ -217,13 +217,19 @@ NumberToken.prototype.evaluate = function(scope){
 
 function ValueToken(value, sourcePathInfo, key){
     this.original = 'Value';
-    this.length = this.original.length,
+    this.length = this.original.length;
     this.result = value;
 
     if(sourcePathInfo){
         this.sourcePathInfo = new SourcePathInfo();
         this.sourcePathInfo.path = sourcePathInfo.path;
-        this.sourcePathInfo.subPaths = sourcePathInfo.subPaths && sourcePathInfo.subPaths.slice();
+        if(sourcePathInfo.subPaths){
+            this.sourcePathInfo.subPaths = new sourcePathInfo.subPaths.constructor();
+
+            for(var subPathKey in sourcePathInfo.subPaths){
+                this.sourcePathInfo.subPaths[subPathKey] = sourcePathInfo.subPaths[subPathKey];
+            }
+        }
     }
 
     if(key != null){
@@ -345,7 +351,7 @@ PeriodToken.prototype.evaluate = function(scope){
     var targetPath;
 
     if(this.targetToken.sourcePathInfo){
-        targetPath = this.targetToken.sourcePathInfo.path
+        targetPath = this.targetToken.sourcePathInfo.path;
     }
 
     if(targetPath){
@@ -435,8 +441,8 @@ FillToken.tokenise = function(substring){
 };
 FillToken.prototype.parse = function(tokens){
     if(tokens._hasFill){
-        throw "A function call may only have one fill token"
-    };
+        throw "A function call may only have one fill token";
+    }
     tokens._hasFill = true;
 };
 FillToken.prototype.evaluate = function(){
@@ -534,7 +540,7 @@ BraceToken.prototype.evaluate = function(scope){
             if(token.valueToken.sourcePathInfo){
                 this.sourcePathInfo.subPaths[key] = token.valueToken.sourcePathInfo.path;
             }
-        };
+        }
 
         return;
     }
@@ -653,10 +659,11 @@ SourcePathInfo.prototype.drillTo = function(key){
 function addFilterResult(filteredItems, item, key, sourcePathInfo, isArray){
     if(isArray){
         filteredItems.push(item);
+        sourcePathInfo.pushSubPath(key);
     }else{
         filteredItems[key] = item;
+        sourcePathInfo.setSubPath(key, key);
     }
-    sourcePathInfo.pushSubPath(key);
 }
 
 function gelFilter(scope, args) {
@@ -1059,7 +1066,7 @@ var tokenConverters = [
                     var nullPaths = [];
                     for(var i = 0; i < argToken.result.length; i++) {
                         nullPaths.push(null);
-                    };
+                    }
                     sourcePaths = sourcePaths.concat(nullPaths);
                 }
             };
@@ -1537,7 +1544,7 @@ Gel = function(){
 
 for (var i = 0; i < tokenConverters.length; i++) {
     Gel[tokenConverters[i].prototype.name] = tokenConverters[i];
-};
+}
 
 Gel.Token = Token;
 Gel.Scope = Scope;
