@@ -1,6 +1,6 @@
 var Lang = require('lang-js'),
     paths = require('gedi-paths'),
-    merge = require('merge'),
+    merge = require('clean-merge'),
     createNestingParser = Lang.createNestingParser,
     detectString = Lang.detectString,
     Token = Lang.Token,
@@ -653,10 +653,11 @@ SourcePathInfo.prototype.drillTo = function(key){
 function addFilterResult(filteredItems, item, key, sourcePathInfo, isArray){
     if(isArray){
         filteredItems.push(item);
+        sourcePathInfo.pushSubPath(key);
     }else{
         filteredItems[key] = item;
+        sourcePathInfo.setSubPath(key, key);
     }
-    sourcePathInfo.pushSubPath(key);
 }
 
 function gelFilter(scope, args) {

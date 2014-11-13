@@ -1081,11 +1081,10 @@ test('(fold "1","2",3 0 (+ _ _|>parseInt))', function (t) {
     );
     t.end();
 });
-test.only('(apply merge (array {"foo" : {"prop" : "value"  "stuff" : (array 1 2 3)}} null null null null {"bar" : {"prop" : "value" "thing" : "stuff"}}))', function (t) {
-  t.plan(1);
-  t.equal(
-      gel.evaluate(t.name, context),
-      {'bar':{'thing':'stuff'}, 'foo': {'stuff':[1,2,3]}}
-  );
-  t.end();
+test('(merge {"x":{"y":3.5}} {"x":{"wing":"meh"} "y":{"s":"club7"}})', function(t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        {"x":{"y":3.5,"wing":"meh"},"y":{"s":"club7"}}
+    );
 });
