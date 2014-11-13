@@ -1065,14 +1065,6 @@ test('(fold 1,2,3 0 +)', function (t) {
     );
     t.end();
 });
-test.only('(apply merge (array {"foo" : {"stuff" : (array 1 2 3)}} {"bar" : {"thing" : "stuff"}}))', function (t) {
-  t.plan(1);
-  t.equal(
-      gel.evaluate(t.name, context),
-      {'bar':{'thing':'stuff'}, 'foo': {'stuff':[1,2,3]}}
-  );
-  t.end();
-});
 test('{"a":1},{"a":2},{"a":3} |> (map _ (* 2 _.a))', function (t) {
     t.plan(1);
     t.deepEqual(
@@ -1088,4 +1080,12 @@ test('(fold "1","2",3 0 (+ _ _|>parseInt))', function (t) {
         6
     );
     t.end();
+});
+test.only('(fold (array {"foo" : {"stuff" : (array 1 2 3)}} {"bar" : {"thing" : "stuff"}}) {} {result item (merge result item)})', function (t) {
+  t.plan(1);
+  t.equal(
+      gel.evaluate(t.name, context),
+      {'bar':{'thing':'stuff'}, 'foo': {'stuff':[1,2,3]}}
+  );
+  t.end();
 });
