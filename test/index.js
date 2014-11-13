@@ -1081,6 +1081,13 @@ test('(fold "1","2",3 0 (+ _ _|>parseInt))', function (t) {
     );
     t.end();
 });
+test('(merge {"x":{"y":3.5}} {"x":{"wing":"meh"} "y":{"s":"club7"}})', function(t) {
+    t.plan(1);
+    t.deepEqual(
+        gel.evaluate(t.name, context),
+        {"x":{"y":3.5,"wing":"meh"},"y":{"s":"club7"}}
+    );
+});
 test('(fold (array {"foo" : {"stuff" : (array 1 2 3)}} {"bar" : {"thing" : "stuff"}}) {} {result item (merge result item)})', function (t) {
   t.plan(1);
   t.deepEqual(
