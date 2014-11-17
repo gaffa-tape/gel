@@ -649,6 +649,11 @@ SourcePathInfo.prototype.mapSubPaths = function(object){
     }
 };
 SourcePathInfo.prototype.drillTo = function(key){
+    if(key == null){
+        this.subPaths = null;
+        this.path = null;
+        return;
+    }
     if(this.subPaths){
         this.path = this.subPaths[key];
     }else if(this.path){
