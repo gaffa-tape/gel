@@ -143,7 +143,7 @@ function executeFunction(parenthesesToken, scope, fn){
                 }
             }
 
-            return scope.callWith(fn, appliedArgs, parenthesesToken);
+            return scope.callWith(fn, appliedArgs, args.callee);
         };
         return;
     }
@@ -421,6 +421,7 @@ PartialToken.prototype.parse = function(tokens){
     tokens._partials++;
 };
 PartialToken.prototype.evaluate = function(scope){
+    this.sourcePathInfo = scope._innerArgs.getRaw(this._partialIndex).sourcePathInfo;
     this.result = scope._innerArgs.get(this._partialIndex);
 };
 
