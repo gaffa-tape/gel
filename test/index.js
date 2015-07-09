@@ -1096,3 +1096,19 @@ test('(fold (array {"foo" : {"stuff" : (array 1 2 3)}} {"bar" : {"thing" : "stuf
   );
   t.end();
 });
+test('2|>{_thing (+ 1 _thing)}', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});
+test('2|>{_2spoooky (+ 1 _2spoooky)}', function (t) {
+    t.plan(1);
+    t.equal(
+        gel.evaluate(t.name, context),
+        3
+    );
+    t.end();
+});

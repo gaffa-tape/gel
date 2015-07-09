@@ -416,7 +416,7 @@ PartialToken.tokenPrecedence = 1;
 PartialToken.prototype.parsePrecedence = 4;
 PartialToken.tokenise = function(substring){
     var characterConst = "_";
-    return (substring.charAt(0) === characterConst) ? new PartialToken(characterConst, 1) : undefined;
+    return substring.match(/^_(?!\w)/i) ? new PartialToken(characterConst, 1) : undefined;
 };
 PartialToken.prototype.parse = function(tokens){
     if(tokens._hasFill){
