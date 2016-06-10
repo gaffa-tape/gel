@@ -657,6 +657,8 @@ SourcePathInfo.prototype.drillTo = function(key){
     }
     if(this.subPaths){
         this.path = this.subPaths[key];
+    }else if(this.innerPathInfo && this.innerPathInfo.subPaths){
+        this.path = this.innerPathInfo.subPaths[key];
     }else if(this.path){
         this.path = paths.append(this.path, paths.create(key));
     }
